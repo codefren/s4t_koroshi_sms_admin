@@ -1,6 +1,14 @@
+import { useState } from 'react'
 import './App.css'
+import OrderDetails from './OrderDetails'
 
 function App() {
+  const [showOrderDetails, setShowOrderDetails] = useState(false)
+
+  if (showOrderDetails) {
+    return <OrderDetails onBack={() => setShowOrderDetails(false)} />
+  }
+
   return (
     <div className="dashboard">
       {/* Sidebar */}
