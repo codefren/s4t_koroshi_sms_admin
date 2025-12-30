@@ -1,6 +1,209 @@
+import { useState, useEffect } from 'react'
 import './OrderDetails.css'
 
-function OrderDetails({ onBack }) {
+function OrderDetails({ onBack, orderId }) {
+  const [order, setOrder] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [operators, setOperators] = useState([])
+  const [selectedOperator, setSelectedOperator] = useState('')
+  const [loadingOperators, setLoadingOperators] = useState(false)
+  const [assigningOperator, setAssigningOperator] = useState(false)
+  const [assignError, setAssignError] = useState(null)
+  const [assignSuccess, setAssignSuccess] = useState(false)
+
+  // Funciones auxiliares
+  const hasOperatorAssigned = (operarioAsignado) => {
+    if (!operarioAsignado || operarioAsignado.trim() === '') return false
+    const lowerValue = operarioAsignado.toLowerCase().trim()
+    const noAssignedTexts = ['sin operario', 'sin asignar', 'no asignado', 'null', 'undefined']
+    return !noAssignedTexts.includes(lowerValue)
+  }
+
+  const getPriorityClass = (prioridad) => {
+    const priorities = {
+      'HIGH': 'high',
+      'URGENT': 'high',
+      'NORMAL': 'medium',
+      'LOW': 'low'
+    }
+    return priorities[prioridad] || 'medium'
+  }
+
+  const getPriorityLabel = (prioridad) => {
+    const labels = {
+      'HIGH': 'ALTA PRIORIDAD',
+      'URGENT': 'URGENTE',
+      'NORMAL': 'PRIORIDAD MEDIA',
+      'LOW': 'PRIORIDAD BAJA'
+    }
+    return labels[prioridad] || prioridad
+  }
+
+  const getStatusClass = (estadoCodigo) => {
+    const statuses = {
+      'PENDING': 'pending',
+      'ASSIGNED': 'assigned',
+      'IN_PICKING': 'in-progress',
+      'PICKED': 'picked',
+      'PACKING': 'packing',
+      'READY': 'ready',
+      'SHIPPED': 'completed',
+      'CANCELLED': 'cancelled'
+    }
+    return statuses[estadoCodigo] || 'pending'
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString || dateString === 'Sin fecha límite') return dateString
+    const date = new Date(dateString)
+    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+
+  // Cargar detalle de orden desde la API
+  useEffect(() => {
+    const fetchOrderDetails = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`http://localhost:8000/api/v1/orders/${orderId}/`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          mode: 'cors',
+        })
+        if (!response.ok) {
+          throw new Error(`Error al cargar el detalle de la orden: ${response.status} ${response.statusText}`)
+        }
+        const data = await response.json()
+        setOrder(data)
+      } catch (err) {
+        setError(err.message)
+        console.error('Error completo:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (orderId) {
+      fetchOrderDetails()
+    }
+  }, [orderId])
+
+  // Cargar operarios activos desde la API
+  useEffect(() => {
+    const fetchOperators = async () => {
+      try {
+        setLoadingOperators(true)
+        const response = await fetch('http://localhost:8000/api/v1/operators?activo=true', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          mode: 'cors',
+        })
+        if (!response.ok) {
+          throw new Error(`Error al cargar operarios: ${response.status} ${response.statusText}`)
+        }
+        const data = await response.json()
+        setOperators(data)
+      } catch (err) {
+        console.error('Error al cargar operarios:', err)
+      } finally {
+        setLoadingOperators(false)
+      }
+    }
+
+    fetchOperators()
+  }, [])
+
+  // Preseleccionar operario si la orden ya tiene uno asignado
+  useEffect(() => {
+    if (order && operators.length > 0 && hasOperatorAssigned(order.operario_asignado)) {
+      // Buscar el operario en la lista por nombre
+      const assignedOperator = operators.find(
+        op => op.nombre === order.operario_asignado
+      )
+      if (assignedOperator) {
+        setSelectedOperator(assignedOperator.id.toString())
+      }
+    }
+  }, [order, operators])
+
+  // Función para asignar operario a la orden
+  const handleAssignOperator = async () => {
+    if (!selectedOperator) return
+
+    try {
+      setAssigningOperator(true)
+      setAssignError(null)
+      setAssignSuccess(false)
+
+      const response = await fetch(`http://localhost:8000/api/v1/orders/${orderId}/assign-operator/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+        body: JSON.stringify({
+          operator_id: parseInt(selectedOperator)
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.detail || `Error al asignar operario: ${response.status} ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      
+      // Actualizar la orden con los nuevos datos
+      setOrder(data)
+      setAssignSuccess(true)
+      setSelectedOperator('')
+
+      // Ocultar mensaje de éxito después de 3 segundos
+      setTimeout(() => {
+        setAssignSuccess(false)
+      }, 3000)
+
+    } catch (err) {
+      setAssignError(err.message)
+      console.error('Error al asignar operario:', err)
+    } finally {
+      setAssigningOperator(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="dashboard">
+        <div style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
+          Cargando detalles de la orden...
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="dashboard">
+        <div style={{ padding: '2rem', textAlign: 'center', color: '#EF4444' }}>
+          Error: {error}
+        </div>
+      </div>
+    )
+  }
+
+  if (!order) {
+    return (
+      <div className="dashboard">
+        <div style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
+          No se encontró la orden
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="dashboard">
       {/* Sidebar */}
@@ -18,7 +221,7 @@ function OrderDetails({ onBack }) {
             <svg className="nav-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18.75 2.99986H15.3506C14.9292 2.52804 14.4129 2.15054 13.8355 1.89207C13.2581 1.63361 12.6326 1.5 12 1.5C11.3674 1.5 10.7419 1.63361 10.1645 1.89207C9.58709 2.15054 9.07079 2.52804 8.64937 2.99986H5.25C4.85218 2.99986 4.47064 3.1579 4.18934 3.4392C3.90804 3.72051 3.75 4.10204 3.75 4.49986V20.2499C3.75 20.6477 3.90804 21.0292 4.18934 21.3105C4.47064 21.5918 4.85218 21.7499 5.25 21.7499H18.75C19.1478 21.7499 19.5294 21.5918 19.8107 21.3105C20.092 21.0292 20.25 20.6477 20.25 20.2499V4.49986C20.25 4.10204 20.092 3.72051 19.8107 3.4392C19.5294 3.1579 19.1478 2.99986 18.75 2.99986ZM12 2.99986C12.7956 2.99986 13.5587 3.31593 14.1213 3.87854C14.6839 4.44115 15 5.20421 15 5.99986H9C9 5.20421 9.31607 4.44115 9.87868 3.87854C10.4413 3.31593 11.2044 2.99986 12 2.99986ZM15 14.9999H9C8.80109 14.9999 8.61032 14.9208 8.46967 14.7802C8.32902 14.6395 8.25 14.4488 8.25 14.2499C8.25 14.051 8.32902 13.8602 8.46967 13.7195C8.61032 13.5789 8.80109 13.4999 9 13.4999H15C15.1989 13.4999 15.3897 13.5789 15.5303 13.7195C15.671 13.8602 15.75 14.051 15.75 14.2499C15.75 14.4488 15.671 14.6395 15.5303 14.7802C15.3897 14.9208 15.1989 14.9999 15 14.9999ZM15 11.9999H9C8.80109 11.9999 8.61032 11.9208 8.46967 11.7802C8.32902 11.6395 8.25 11.4488 8.25 11.2499C8.25 11.051 8.32902 10.8602 8.46967 10.7195C8.61032 10.5789 8.80109 10.4999 9 10.4999H15C15.1989 10.4999 15.3897 10.5789 15.5303 10.7195C15.671 10.8602 15.75 11.051 15.75 11.2499C15.75 11.4488 15.671 11.6395 15.5303 11.7802C15.3897 11.9208 15.1989 11.9999 15 11.9999Z" fill="white"/>
             </svg>
-            <span className="nav-text">Pedidos</span>
+            <span className="nav-text">Órdenes</span>
           </button>
 
           <button className="nav-item">
@@ -55,13 +258,13 @@ function OrderDetails({ onBack }) {
               </svg>
             </button>
             <div className="header-title-section">
-              <h1 className="order-title">Pedido #P00124</h1>
-              <p className="order-subtitle">Detalles completos del pedido</p>
+              <h1 className="order-title">Orden #{order.numero_orden}</h1>
+              <p className="order-subtitle">Detalles completos de la orden</p>
             </div>
           </div>
           <div className="header-badges">
-            <div className="status-badge-header pending">PENDIENTE</div>
-            <div className="priority-badge-header high">ALTA PRIORIDAD</div>
+            <div className={`status-badge-header ${getStatusClass(order.estado_codigo)}`}>{order.estado.toUpperCase()}</div>
+            <div className={`priority-badge-header ${getPriorityClass(order.prioridad)}`}>{getPriorityLabel(order.prioridad)}</div>
           </div>
         </header>
 
@@ -71,19 +274,31 @@ function OrderDetails({ onBack }) {
           <div className="details-left-column">
             {/* Order Information Card */}
             <div className="info-card">
-              <h2 className="card-title">Información del Pedido</h2>
+              <h2 className="card-title">Información de la Orden</h2>
               <div className="info-grid">
                 <div className="info-item">
+                  <span className="info-label">Cliente</span>
+                  <span className="info-value">{order.nombre_cliente}</span>
+                </div>
+                <div className="info-item">
                   <span className="info-label">Fecha de Creación</span>
-                  <span className="info-value">15 Enero 2025, 08:30 AM</span>
+                  <span className="info-value">{formatDate(order.fecha_creacion)}</span>
                 </div>
                 <div className="info-item">
                   <span className="info-label">Fecha Límite</span>
-                  <span className="info-value">15 Enero 2025, 18:00 PM</span>
+                  <span className="info-value">{order.fecha_limite}</span>
                 </div>
                 <div className="info-item">
                   <span className="info-label">Total de Cajas</span>
-                  <span className="info-value">3 cajas</span>
+                  <span className="info-value">{order.total_cajas}</span>
+                </div>
+                <div className="info-item">
+                  <span className="info-label">Operario Asignado</span>
+                  <span className="info-value">{hasOperatorAssigned(order.operario_asignado) ? order.operario_asignado : 'Sin asignar'}</span>
+                </div>
+                <div className="info-item">
+                  <span className="info-label">Progreso</span>
+                  <span className="info-value">{order.items_completados} de {order.total_items} items ({order.progreso_porcentaje.toFixed(1)}%)</span>
                 </div>
               </div>
             </div>
@@ -92,60 +307,32 @@ function OrderDetails({ onBack }) {
             <div className="products-card">
               <div className="products-header">
                 <h2 className="card-title">Lista de Productos</h2>
-                <div className="items-count-badge">28 items</div>
+                <div className="items-count-badge">{order.total_items} items</div>
               </div>
               <div className="products-list">
-                <div className="product-item">
-                  <img src="https://api.builder.io/api/v1/image/assets/TEMP/5123e7d23039d1868bacb86fe7310ba181a4185f?width=128" alt="Laptop Dell Inspiron 15" className="product-image" />
+                {order.productos.map((producto) => (
+                <div className="product-item" key={producto.id}>
+                  <div className="product-image-placeholder" style={{ width: '64px', height: '64px', backgroundColor: '#E2E8F0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B' }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M20.25 6.375C20.25 8.65317 18.4032 10.5 16.125 10.5C13.8468 10.5 12 8.65317 12 6.375C12 4.09683 13.8468 2.25 16.125 2.25C18.4032 2.25 20.25 4.09683 20.25 6.375Z"/>
+                      <path d="M3.75 19.125C3.75 14.7767 7.27673 11.25 11.625 11.25H12.375C16.7233 11.25 20.25 14.7767 20.25 19.125V21.75H3.75V19.125Z"/>
+                    </svg>
+                  </div>
                   <div className="product-details">
-                    <h3 className="product-name">Laptop Dell Inspiron 15</h3>
-                    <p className="product-sku">SKU: LAP-DELL-INS15-2024</p>
+                    <h3 className="product-name">{producto.nombre} - {producto.descripcion}</h3>
+                    <p className="product-sku">SKU: {producto.sku} | EAN: {producto.ean}</p>
                     <div className="product-specs">
-                      <span className="product-spec">Pasillo: A2-B05-012</span>
-                      <span className="product-spec">Color: Negro</span>
+                      <span className="product-spec">Ubicación: {producto.ubicacion}</span>
+                      <span className="product-spec">Talla: {producto.talla}</span>
+                      <span className="product-spec">Color: {producto.color}</span>
+                      <span className={`product-spec ${producto.estado === 'COMPLETED' ? 'text-green-600' : 'text-orange-600'}`}>
+                        Estado: {producto.estado === 'COMPLETED' ? 'Completado' : 'Pendiente'} ({producto.cantidad_servida}/{producto.cantidad_solicitada})
+                      </span>
                     </div>
                   </div>
-                  <div className="product-quantity">5</div>
+                  <div className="product-quantity">{producto.cantidad_solicitada}</div>
                 </div>
-
-                <div className="product-item">
-                  <img src="https://api.builder.io/api/v1/image/assets/TEMP/7b2cefb87a8d8af2586d3b76bac11aa2c7dcdeaf?width=128" alt="Mouse Logitech MX Master 3" className="product-image" />
-                  <div className="product-details">
-                    <h3 className="product-name">Mouse Logitech MX Master 3</h3>
-                    <p className="product-sku">SKU: MOU-LOG-MX3-BLK</p>
-                    <div className="product-specs">
-                      <span className="product-spec">Pasillo: A2-B05-018</span>
-                      <span className="product-spec">Color: Negro</span>
-                    </div>
-                  </div>
-                  <div className="product-quantity">8</div>
-                </div>
-
-                <div className="product-item">
-                  <img src="https://api.builder.io/api/v1/image/assets/TEMP/293b3d5d019f1e616573a8713a5763118c42b63e?width=128" alt="Teclado Mecánico Corsair K95" className="product-image" />
-                  <div className="product-details">
-                    <h3 className="product-name">Teclado Mecánico Corsair K95</h3>
-                    <p className="product-sku">SKU: KEY-COR-K95-RGB</p>
-                    <div className="product-specs">
-                      <span className="product-spec">Pasillo: A2-B06-003</span>
-                      <span className="product-spec">Color: RGB</span>
-                    </div>
-                  </div>
-                  <div className="product-quantity">6</div>
-                </div>
-
-                <div className="product-item">
-                  <img src="https://api.builder.io/api/v1/image/assets/TEMP/0a5f5f325fa1e50cbd42ad4f117bd728f390ec1a?width=128" alt="Cable USB-C 2m Anker" className="product-image" />
-                  <div className="product-details">
-                    <h3 className="product-name">Cable USB-C 2m Anker</h3>
-                    <p className="product-sku">SKU: CAB-ANK-USBC-2M</p>
-                    <div className="product-specs">
-                      <span className="product-spec">Pasillo: A3-B01-025</span>
-                      <span className="product-spec">Color: Blanco</span>
-                    </div>
-                  </div>
-                  <div className="product-quantity">9</div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
@@ -154,19 +341,116 @@ function OrderDetails({ onBack }) {
           <div className="details-right-column">
             {/* Assign Operator Card */}
             <div className="assign-card">
-              <h2 className="assign-title">Asignar Operario</h2>
-              <div className="operator-select-section">
-                <label className="select-label">Selecciona un operario disponible</label>
-                <div className="operator-select">
-                  <span>Carlos Mendoza (OP-4521)</span>
+              <h2 className="assign-title">{hasOperatorAssigned(order.operario_asignado) ? 'Reasignar Operario' : 'Asignar Operario'}</h2>
+              
+              {hasOperatorAssigned(order.operario_asignado) && (
+                <div style={{
+                  marginBottom: '1rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#EFF6FF',
+                  border: '1px solid #3B82F6',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  color: '#1E40AF'
+                }}>
+                  <strong>Operario actual:</strong> {order.operario_asignado}
                 </div>
+              )}
+              
+              <div className="operator-select-section">
+                <label className="select-label">{hasOperatorAssigned(order.operario_asignado) ? 'Cambiar a otro operario' : 'Selecciona un operario disponible'}</label>
+                <select 
+                  className="operator-select"
+                  value={selectedOperator}
+                  onChange={(e) => setSelectedOperator(e.target.value)}
+                  disabled={loadingOperators || operators.length === 0}
+                  style={{ 
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #E2E8F0',
+                    fontSize: '14px',
+                    color: '#1E293B',
+                    backgroundColor: 'white',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">
+                    {loadingOperators ? 'Cargando operarios...' : 'Selecciona un operario'}
+                  </option>
+                  {operators.map((operator) => (
+                    <option key={operator.id} value={operator.id}>
+                      {operator.nombre} ({operator.codigo_operario})
+                    </option>
+                  ))}
+                </select>
               </div>
-              <button className="assign-button">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 17.5C14.1421 17.5 17.5 14.1421 17.5 10C17.5 5.85786 14.1421 2.5 10 2.5C5.85786 2.5 2.5 5.85786 2.5 10C2.5 14.1421 5.85786 17.5 10 17.5Z" stroke="#3B82F6" strokeWidth="1.25"/>
-                </svg>
-                <span className="assign-button-text">Asignar Pedido</span>
+              <button 
+                className="assign-button"
+                disabled={!selectedOperator || assigningOperator}
+                onClick={handleAssignOperator}
+                style={{
+                  opacity: (!selectedOperator || assigningOperator) ? 0.5 : 1,
+                  cursor: (!selectedOperator || assigningOperator) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {assigningOperator ? (
+                  <>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ animation: 'spin 1s linear infinite' }}>
+                      <circle cx="10" cy="10" r="8" stroke="#3B82F6" strokeWidth="2" strokeDasharray="12 8" fill="none" />
+                    </svg>
+                    <span className="assign-button-text">Asignando...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M10 17.5C14.1421 17.5 17.5 14.1421 17.5 10C17.5 5.85786 14.1421 2.5 10 2.5C5.85786 2.5 2.5 5.85786 2.5 10C2.5 14.1421 5.85786 17.5 10 17.5Z" stroke="#3B82F6" strokeWidth="1.25"/>
+                    </svg>
+                    <span className="assign-button-text">{hasOperatorAssigned(order.operario_asignado) ? 'Reasignar Operario' : 'Asignar Orden'}</span>
+                  </>
+                )}
               </button>
+              
+              {/* Mensajes de feedback */}
+              {assignSuccess && (
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#D1FAE5',
+                  border: '1px solid #10B981',
+                  borderRadius: '8px',
+                  color: '#065F46',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>¡Operario {hasOperatorAssigned(order.operario_asignado) ? 'reasignado' : 'asignado'} correctamente!</span>
+                </div>
+              )}
+              
+              {assignError && (
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#FEE2E2',
+                  border: '1px solid #EF4444',
+                  borderRadius: '8px',
+                  color: '#991B1B',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <span>{assignError}</span>
+                </div>
+              )}
             </div>
 
             {/* Summary Card */}
@@ -175,20 +459,20 @@ function OrderDetails({ onBack }) {
               <div className="summary-items">
                 <div className="summary-item">
                   <span className="summary-label">Total Items</span>
-                  <span className="summary-value">28</span>
+                  <span className="summary-value">{order.total_items}</span>
                 </div>
                 <div className="summary-item">
-                  <span className="summary-label">Total Cajas</span>
-                  <span className="summary-value">3</span>
+                  <span className="summary-label">Items Completados</span>
+                  <span className="summary-value">{order.items_completados}</span>
                 </div>
                 <div className="summary-item">
-                  <span className="summary-label">Tiempo Estimado</span>
-                  <span className="summary-value">2.5 horas</span>
+                  <span className="summary-label">Progreso</span>
+                  <span className="summary-value">{order.progreso_porcentaje.toFixed(1)}%</span>
                 </div>
               </div>
               <div className="summary-total">
                 <span className="summary-total-label">Productos Únicos</span>
-                <span className="summary-total-value">4</span>
+                <span className="summary-total-value">{order.productos.length}</span>
               </div>
             </div>
           </div>

@@ -1,12 +1,123 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 import OrderDetails from './OrderDetails'
 
 function App() {
   const [showOrderDetails, setShowOrderDetails] = useState(false)
+  const [selectedOrderId, setSelectedOrderId] = useState(null)
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [lastUpdate, setLastUpdate] = useState(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
-  if (showOrderDetails) {
-    return <OrderDetails onBack={() => setShowOrderDetails(false)} />
+  // Funciones auxiliares
+  const getPriorityClass = (prioridad) => {
+    const priorities = {
+      'HIGH': 'high',
+      'URGENT': 'high',
+      'NORMAL': 'medium',
+      'LOW': 'low'
+    }
+    return priorities[prioridad] || 'medium'
+  }
+
+  const getPriorityLabel = (prioridad) => {
+    const labels = {
+      'HIGH': 'ALTA',
+      'URGENT': 'URGENTE',
+      'NORMAL': 'MEDIA',
+      'LOW': 'BAJA'
+    }
+    return labels[prioridad] || prioridad
+  }
+
+  const getStatusClass = (estadoCodigo) => {
+    const statuses = {
+      'PENDING': 'pending',
+      'ASSIGNED': 'assigned',
+      'IN_PICKING': 'in-progress',
+      'PICKED': 'picked',
+      'PACKING': 'packing',
+      'READY': 'ready',
+      'SHIPPED': 'completed',
+      'CANCELLED': 'cancelled'
+    }
+    return statuses[estadoCodigo] || 'pending'
+  }
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+
+  // Función para cargar órdenes desde la API
+  const fetchOrders = async (isAutoRefresh = false) => {
+    try {
+      // Solo mostrar loading en la carga inicial, no en refrescos automáticos
+      if (!isAutoRefresh) {
+        setLoading(true)
+      } else {
+        setIsRefreshing(true)
+      }
+      
+      const response = await fetch('http://localhost:8000/api/v1/orders/', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+      })
+      if (!response.ok) {
+        throw new Error(`Error al cargar las órdenes: ${response.status} ${response.statusText}`)
+      }
+      const data = await response.json()
+      setOrders(data)
+      setLastUpdate(new Date())
+      // Limpiar errores si la carga fue exitosa
+      if (error) setError(null)
+    } catch (err) {
+      // Solo mostrar error en carga inicial
+      if (!isAutoRefresh) {
+        setError(err.message)
+      }
+      console.error('Error completo:', err)
+    } finally {
+      if (!isAutoRefresh) {
+        setLoading(false)
+      } else {
+        setIsRefreshing(false)
+      }
+    }
+  }
+
+  // Cargar órdenes al montar el componente
+  useEffect(() => {
+    fetchOrders()
+  }, [])
+
+  // Actualización automática cada 10 segundos
+  useEffect(() => {
+    // Solo ejecutar polling cuando estemos en la vista del dashboard (no en detalle)
+    if (showOrderDetails) return
+
+    const interval = setInterval(() => {
+      console.log('🔄 Actualizando órdenes automáticamente...')
+      fetchOrders(true) // true = es un refresco automático
+    }, 10000) // 10 segundos
+
+    // Limpiar el intervalo cuando el componente se desmonte o cambie a detalle
+    return () => {
+      clearInterval(interval)
+      console.log('⏹️ Polling detenido')
+    }
+  }, [showOrderDetails])
+
+  if (showOrderDetails && selectedOrderId) {
+    return <OrderDetails onBack={() => {
+      setShowOrderDetails(false)
+      setSelectedOrderId(null)
+    }} orderId={selectedOrderId} />
   }
 
   return (
@@ -26,7 +137,7 @@ function App() {
             <svg className="nav-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18.75 2.99986H15.3506C14.9292 2.52804 14.4129 2.15054 13.8355 1.89207C13.2581 1.63361 12.6326 1.5 12 1.5C11.3674 1.5 10.7419 1.63361 10.1645 1.89207C9.58709 2.15054 9.07079 2.52804 8.64937 2.99986H5.25C4.85218 2.99986 4.47064 3.1579 4.18934 3.4392C3.90804 3.72051 3.75 4.10204 3.75 4.49986V20.2499C3.75 20.6477 3.90804 21.0292 4.18934 21.3105C4.47064 21.5918 4.85218 21.7499 5.25 21.7499H18.75C19.1478 21.7499 19.5294 21.5918 19.8107 21.3105C20.092 21.0292 20.25 20.6477 20.25 20.2499V4.49986C20.25 4.10204 20.092 3.72051 19.8107 3.4392C19.5294 3.1579 19.1478 2.99986 18.75 2.99986ZM12 2.99986C12.7956 2.99986 13.5587 3.31593 14.1213 3.87854C14.6839 4.44115 15 5.20421 15 5.99986H9C9 5.20421 9.31607 4.44115 9.87868 3.87854C10.4413 3.31593 11.2044 2.99986 12 2.99986ZM15 14.9999H9C8.80109 14.9999 8.61032 14.9208 8.46967 14.7802C8.32902 14.6395 8.25 14.4488 8.25 14.2499C8.25 14.051 8.32902 13.8602 8.46967 13.7195C8.61032 13.5789 8.80109 13.4999 9 13.4999H15C15.1989 13.4999 15.3897 13.5789 15.5303 13.7195C15.671 13.8602 15.75 14.051 15.75 14.2499C15.75 14.4488 15.671 14.6395 15.5303 14.7802C15.3897 14.9208 15.1989 14.9999 15 14.9999ZM15 11.9999H9C8.80109 11.9999 8.61032 11.9208 8.46967 11.7802C8.32902 11.6395 8.25 11.4488 8.25 11.2499C8.25 11.051 8.32902 10.8602 8.46967 10.7195C8.61032 10.5789 8.80109 10.4999 9 10.4999H15C15.1989 10.4999 15.3897 10.5789 15.5303 10.7195C15.671 10.8602 15.75 11.051 15.75 11.2499C15.75 11.4488 15.671 11.6395 15.5303 11.7802C15.3897 11.9208 15.1989 11.9999 15 11.9999Z" fill="white"/>
             </svg>
-            <span className="nav-text">Pedidos</span>
+            <span className="nav-text">Órdenes</span>
           </button>
 
           <button className="nav-item">
@@ -57,8 +168,40 @@ function App() {
         {/* Dashboard Header */}
         <header className="dashboard-header">
           <div className="header-left">
-            <h1 className="page-title">Gestión de Pedidos</h1>
-            <p className="page-subtitle">Administra y asigna pedidos a operarios</p>
+            <div>
+              <h1 className="page-title">Gestión de Órdenes</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+                <p className="page-subtitle">Administra y asigna órdenes a operarios</p>
+                {lastUpdate && (
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '6px',
+                    fontSize: '12px',
+                    color: '#64748B',
+                    padding: '4px 8px',
+                    backgroundColor: '#F1F5F9',
+                    borderRadius: '6px'
+                  }}>
+                    {isRefreshing ? (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
+                          <circle cx="10" cy="10" r="8" stroke="#3B82F6" strokeWidth="2" strokeDasharray="12 8" fill="none" />
+                        </svg>
+                        <span>Actualizando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                        </svg>
+                        <span>Última actualización: {lastUpdate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="header-actions">
@@ -66,7 +209,7 @@ function App() {
               <svg className="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M18.1633 16.8369L14.4531 13.1251C15.5656 11.6755 16.0849 9.85701 15.9059 8.03853C15.7268 6.22005 14.8628 4.53777 13.489 3.33294C12.1152 2.12811 10.3345 1.49096 8.50822 1.55073C6.68193 1.6105 4.94675 2.36272 3.65467 3.65479C2.3626 4.94687 1.61038 6.68205 1.55061 8.50834C1.49084 10.3346 2.12799 12.1153 3.33282 13.4891C4.53765 14.8629 6.21993 15.7269 8.03841 15.906C9.85688 16.085 11.6754 15.5657 13.125 14.4533L16.8383 18.1673C16.9255 18.2545 17.029 18.3237 17.143 18.3709C17.2569 18.4181 17.379 18.4424 17.5024 18.4424C17.6257 18.4424 17.7478 18.4181 17.8617 18.3709C17.9757 18.3237 18.0792 18.2545 18.1664 18.1673C18.2536 18.0801 18.3228 17.9766 18.37 17.8626C18.4172 17.7487 18.4415 17.6266 18.4415 17.5033C18.4415 17.3799 18.4172 17.2578 18.37 17.1439C18.3228 17.0299 18.2536 16.9264 18.1664 16.8392L18.1633 16.8369ZM3.43752 8.75014C3.43752 7.69942 3.74909 6.67231 4.33283 5.79867C4.91658 4.92503 5.74628 4.24412 6.71701 3.84203C7.68774 3.43994 8.75591 3.33473 9.78643 3.53972C10.817 3.7447 11.7636 4.25067 12.5065 4.99363C13.2495 5.7366 13.7555 6.6832 13.9604 7.71372C14.1654 8.74424 14.0602 9.81241 13.6581 10.7831C13.256 11.7539 12.5751 12.5836 11.7015 13.1673C10.8278 13.7511 9.80073 14.0626 8.75002 14.0626C7.3415 14.0612 5.99108 13.501 4.99511 12.505C3.99914 11.5091 3.43896 10.1587 3.43752 8.75014Z" fill="#94A3B8"/>
               </svg>
-              <input type="text" className="search-input" placeholder="Buscar pedidos..." />
+              <input type="text" className="search-input" placeholder="Buscar órdenes..." />
             </div>
 
             <button className="notification-button">
@@ -88,27 +231,27 @@ function App() {
           <div className="stats-row">
             <div className="stat-card">
               <div className="stat-header">
-                <span className="stat-label">Total Pedidos</span>
+                <span className="stat-label">Total Órdenes</span>
                 <div className="stat-icon-container">
                   <svg className="stat-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M18.75 2.99986H15.3506C14.9292 2.52804 14.4129 2.15054 13.8355 1.89207C13.2581 1.63361 12.6326 1.5 12 1.5C11.3674 1.5 10.7419 1.63361 10.1645 1.89207C9.58709 2.15054 9.07079 2.52804 8.64937 2.99986H5.25C4.85218 2.99986 4.47064 3.1579 4.18934 3.4392C3.90804 3.72051 3.75 4.10204 3.75 4.49986V20.2499C3.75 20.6477 3.90804 21.0292 4.18934 21.3105C4.47064 21.5918 4.85218 21.7499 5.25 21.7499H18.75C19.1478 21.7499 19.5294 21.5918 19.8107 21.3105C20.092 21.0292 20.25 20.6477 20.25 20.2499V4.49986C20.25 4.10204 20.092 3.72051 19.8107 3.4392C19.5294 3.1579 19.1478 2.99986 18.75 2.99986ZM12 2.99986C12.7956 2.99986 13.5587 3.31593 14.1213 3.87854C14.6839 4.44115 15 5.20421 15 5.99986H9C9 5.20421 9.31607 4.44115 9.87868 3.87854C10.4413 3.31593 11.2044 2.99986 12 2.99986ZM15 14.9999H9C8.80109 14.9999 8.61032 14.9208 8.46967 14.7802C8.32902 14.6395 8.25 14.4488 8.25 14.2499C8.25 14.051 8.32902 13.8602 8.46967 13.7195C8.61032 13.5789 8.80109 13.4999 9 13.4999H15C15.1989 13.4999 15.3897 13.5789 15.5303 13.7195C15.671 13.8602 15.75 14.051 15.75 14.2499C15.75 14.4488 15.671 14.6395 15.5303 14.7802C15.3897 14.9208 15.1989 14.9999 15 14.9999ZM15 11.9999H9C8.80109 11.9999 8.61032 11.9208 8.46967 11.7802C8.32902 11.6395 8.25 11.4488 8.25 11.2499C8.25 11.051 8.32902 10.8602 8.46967 10.7195C8.61032 10.5789 8.80109 10.4999 9 10.4999H15C15.1989 10.4999 15.3897 10.5789 15.5303 10.7195C15.671 10.8602 15.75 11.051 15.75 11.2499C15.75 11.4488 15.671 11.6395 15.5303 11.7802C15.3897 11.9208 15.1989 11.9999 15 11.9999Z" fill="#3B82F6"/>
                   </svg>
                 </div>
               </div>
-              <div className="stat-value">24</div>
+              <div className="stat-value">{loading ? '...' : orders.length}</div>
               <div className="stat-change">↑ 12% desde ayer</div>
             </div>
 
             <div className="stat-card">
               <div className="stat-header">
-                <span className="stat-label">En Progreso</span>
+                <span className="stat-label">En Picking</span>
                 <div className="stat-icon-container">
                   <svg className="stat-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 2.25C10.0716 2.25 8.18657 2.82183 6.58319 3.89317C4.97982 4.96451 3.73013 6.48726 2.99218 8.26884C2.25422 10.0504 2.06114 12.0108 2.43735 13.9021C2.81355 15.7934 3.74215 17.5307 5.10571 18.8943C6.46928 20.2579 8.20656 21.1865 10.0979 21.5627C11.9892 21.9389 13.9496 21.7458 15.7312 21.0078C17.5127 20.2699 19.0355 19.0202 20.1068 17.4168C21.1782 15.8134 21.75 13.9284 21.75 12C21.7473 9.41498 20.7192 6.93661 18.8913 5.10872C17.0634 3.28084 14.585 2.25273 12 2.25ZM17.25 12.75H12C11.8011 12.75 11.6103 12.671 11.4697 12.5303C11.329 12.3897 11.25 12.1989 11.25 12V6.75C11.25 6.55109 11.329 6.36032 11.4697 6.21967C11.6103 6.07902 11.8011 6 12 6C12.1989 6 12.3897 6.07902 12.5303 6.21967C12.671 6.36032 12.75 6.55109 12.75 6.75V11.25H17.25C17.4489 11.25 17.6397 11.329 17.7803 11.4697C17.921 11.6103 18 11.8011 18 12C18 12.1989 17.921 12.3897 17.7803 12.5303C17.6397 12.671 17.4489 12.75 17.25 12.75Z" fill="#22C55E"/>
                   </svg>
                 </div>
               </div>
-              <div className="stat-value">8</div>
+              <div className="stat-value">{loading ? '...' : orders.filter(o => o.estado_codigo === 'IN_PICKING').length}</div>
               <div className="stat-change">↑ 5% desde ayer</div>
             </div>
 
@@ -121,20 +264,20 @@ function App() {
                   </svg>
                 </div>
               </div>
-              <div className="stat-value">12</div>
+              <div className="stat-value">{loading ? '...' : orders.filter(o => o.estado_codigo === 'PENDING').length}</div>
               <div className="stat-change">↓ 3% desde ayer</div>
             </div>
 
             <div className="stat-card">
               <div className="stat-header">
-                <span className="stat-label">Completados</span>
+                <span className="stat-label">Enviadas</span>
                 <div className="stat-icon-container">
                   <svg className="stat-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 2.25C10.0716 2.25 8.18657 2.82183 6.58319 3.89317C4.97982 4.96451 3.73013 6.48726 2.99218 8.26884C2.25422 10.0504 2.06114 12.0108 2.43735 13.9021C2.81355 15.7934 3.74215 17.5307 5.10571 18.8943C6.46928 20.2579 8.20656 21.1865 10.0979 21.5627C11.9892 21.9389 13.9496 21.7458 15.7312 21.0078C17.5127 20.2699 19.0355 19.0202 20.1068 17.4168C21.1782 15.8134 21.75 13.9284 21.75 12C21.7473 9.41498 20.7192 6.93661 18.8913 5.10872C17.0634 3.28084 14.585 2.25273 12 2.25ZM16.2806 10.2806L11.0306 15.5306C10.961 15.6004 10.8783 15.6557 10.7872 15.6934C10.6962 15.7312 10.5986 15.7506 10.5 15.7506C10.4014 15.7506 10.3038 15.7312 10.2128 15.6934C10.1218 15.6557 10.039 15.6004 9.96938 15.5306L7.71938 13.2806C7.57865 13.1399 7.49959 12.949 7.49959 12.75C7.49959 12.551 7.57865 12.3601 7.71938 12.2194C7.86011 12.0786 8.05098 11.9996 8.25 11.9996C8.44903 11.9996 8.6399 12.0786 8.78063 12.2194L10.5 13.9397L15.2194 9.21937C15.2891 9.14969 15.3718 9.09442 15.4628 9.0567C15.5539 9.01899 15.6515 8.99958 15.75 8.99958C15.8486 8.99958 15.9461 9.01899 16.0372 9.0567C16.1282 9.09442 16.2109 9.14969 16.2806 9.21937C16.3503 9.28906 16.4056 9.37178 16.4433 9.46283C16.481 9.55387 16.5004 9.65145 16.5004 9.75C16.5004 9.84855 16.481 9.94613 16.4433 10.0372C16.4056 10.1282 16.3503 10.2109 16.2806 10.2806Z" fill="#6366F1"/>
                   </svg>
                 </div>
               </div>
-              <div className="stat-value">4</div>
+              <div className="stat-value">{loading ? '...' : orders.filter(o => o.estado_codigo === 'SHIPPED').length}</div>
               <div className="stat-change">↑ 8% desde ayer</div>
             </div>
           </div>
@@ -175,14 +318,14 @@ function App() {
               <svg className="button-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M17.8125 10C17.8125 10.2486 17.7137 10.4871 17.5379 10.6629C17.3621 10.8387 17.1236 10.9375 16.875 10.9375H10.9375V16.875C10.9375 17.1236 10.8387 17.3621 10.6629 17.5379C10.4871 17.7137 10.2486 17.8125 10 17.8125C9.75136 17.8125 9.5129 17.7137 9.33709 17.5379C9.16127 17.3621 9.0625 17.1236 9.0625 16.875V10.9375H3.125C2.87636 10.9375 2.6379 10.8387 2.46209 10.6629C2.28627 10.4871 2.1875 10.2486 2.1875 10C2.1875 9.75136 2.28627 9.5129 2.46209 9.33709C2.6379 9.16127 2.87636 9.0625 3.125 9.0625H9.0625V3.125C9.0625 2.87636 9.16127 2.6379 9.33709 2.46209C9.5129 2.28627 9.75136 2.1875 10 2.1875C10.2486 2.1875 10.4871 2.28627 10.6629 2.46209C10.8387 2.6379 10.9375 2.87636 10.9375 3.125V9.0625H16.875C17.1236 9.0625 17.3621 9.16127 17.5379 9.33709C17.7137 9.5129 17.8125 9.75136 17.8125 10Z" fill="white"/>
               </svg>
-              <span>Nuevo Pedido</span>
+              <span>Nueva Orden</span>
             </button>
           </div>
 
           {/* Orders Table */}
           <div className="orders-table-container">
             <div className="table-header">
-              <div>PEDIDO/CLIENTE</div>
+              <div>ORDEN/CLIENTE</div>
               <div></div>
               <div style={{ textAlign: 'center' }}>ITEMS</div>
               <div>OPERARIO</div>
@@ -192,38 +335,80 @@ function App() {
             </div>
 
             <div className="table-body">
-              {/* Row 1 */}
-              <div className="table-row">
-                <div className="table-cell-order" data-label="Pedido">
-                  <span className="order-id">#P00123</span>
-                  <span className="order-date">15 Ene 2025</span>
+              {loading && (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
+                  Cargando órdenes...
+                </div>
+              )}
+
+              {error && (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#EF4444' }}>
+                  Error: {error}
+                </div>
+              )}
+
+              {!loading && !error && orders.length === 0 && (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
+                  No hay órdenes disponibles
+                </div>
+              )}
+
+              {!loading && !error && orders.map((order) => (
+              <div className="table-row" key={order.id}>
+                <div className="table-cell-order" data-label="Orden">
+                  <span className="order-id">#{order.numero_orden}</span>
+                  <span className="order-date">{formatDate(order.fecha_orden)}</span>
                 </div>
 
                 <div className="table-cell-client" data-label="Cliente">
-                  <span className="client-name">Fashion Store MX</span>
-                  <span className="client-location">Ciudad de México</span>
+                  <span className="client-name">{order.nombre_cliente}</span>
+                  <span className="client-location">{order.cliente}</span>
                 </div>
 
                 <div className="table-cell-items" data-label="Items">
-                  <span className="items-count">32</span>
+                  <span className="items-count">{order.total_items}</span>
                   <span className="items-label">items</span>
                 </div>
 
                 <div className="table-cell-operator" data-label="Operario">
-                  <div className="operator-avatar"></div>
-                  <span className="operator-name">Carlos Mendoza</span>
+                  {order.operario_asignado ? (
+                    <>
+                      <div className="operator-avatar"></div>
+                      <span className="operator-name">{order.operario_asignado}</span>
+                    </>
+                  ) : (
+                    <span className="unassigned-text">Sin asignar</span>
+                  )}
                 </div>
 
                 <div className="table-cell-priority" data-label="Prioridad">
-                  <div className="priority-badge high">ALTA</div>
+                  <div className={`priority-badge ${getPriorityClass(order.prioridad)}`}>
+                    {getPriorityLabel(order.prioridad)}
+                  </div>
                 </div>
 
                 <div className="table-cell-status" data-label="Estado">
-                  <div className="status-badge in-progress">En Progreso</div>
+                  <div className={`status-badge ${getStatusClass(order.estado_codigo)}`}>
+                    {order.estado}
+                  </div>
                 </div>
 
                 <div className="table-cell-actions">
-                  <button className="action-button view">
+                  {!order.operario_asignado && (
+                    <button className="action-button assign" onClick={() => {
+                      setSelectedOrderId(order.id)
+                      setShowOrderDetails(true)
+                    }}>
+                      <svg className="action-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16 8.50057C16 8.69949 15.921 8.89025 15.7804 9.0309C15.6397 9.17156 15.4489 9.25057 15.25 9.25057H14.75V9.75057C14.75 9.94949 14.671 10.1403 14.5304 10.2809C14.3897 10.4216 14.1989 10.5006 14 10.5006C13.8011 10.5006 13.6103 10.4216 13.4697 10.2809C13.329 10.1403 13.25 9.94949 13.25 9.75057V9.25057H12.75C12.5511 9.25057 12.3603 9.17156 12.2197 9.0309C12.079 8.89025 12 8.69949 12 8.50057C12 8.30166 12.079 8.1109 12.2197 7.97024C12.3603 7.82959 12.5511 7.75057 12.75 7.75057H13.25V7.25057C13.25 7.05166 13.329 6.8609 13.4697 6.72024C13.6103 6.57959 13.8011 6.50057 14 6.50057C14.1989 6.50057 14.3897 6.57959 14.5304 6.72024C14.671 6.8609 14.75 7.05166 14.75 7.25057V7.75057H15.25C15.4489 7.75057 15.6397 7.82959 15.7804 7.97024C15.921 8.1109 16 8.30166 16 8.50057ZM12.5744 12.0181C12.7024 12.1704 12.7646 12.3673 12.7473 12.5655C12.7301 12.7637 12.6349 12.947 12.4825 13.0749C12.3302 13.2029 12.1333 13.2651 11.9351 13.2479C11.7369 13.2307 11.5536 13.1354 11.4256 12.9831C10.57 11.9643 9.06252 10.7506 6.75002 10.7506C4.9444 10.7506 3.28377 11.5431 2.0744 12.9831C1.94643 13.1354 1.76319 13.2307 1.56499 13.2479C1.36678 13.2651 1.16986 13.2029 1.01752 13.0749C0.865188 12.947 0.769928 12.7637 0.752698 12.5655C0.735468 12.3673 0.79768 12.1704 0.925647 12.0181C1.74048 11.034 2.78583 10.2664 3.96877 9.7837C3.23317 9.20537 2.69614 8.41211 2.43243 7.51432C2.16872 6.61652 2.19143 5.65885 2.49742 4.77457C2.80341 3.89029 3.37744 3.12339 4.13964 2.58059C4.90185 2.03779 5.8143 1.74609 6.75002 1.74609C7.68575 1.74609 8.5982 2.03779 9.3604 2.58059C10.1226 3.12339 10.6966 3.89029 11.0026 4.77457C11.3086 5.65885 11.3313 6.61652 11.0676 7.51432C10.8039 8.41211 10.2669 9.20537 9.53127 9.7837C10.7143 10.2663 11.7597 11.0338 12.5744 12.0181ZM6.75002 9.25057C7.34337 9.25057 7.92339 9.07463 8.41673 8.74498C8.91008 8.41534 9.2946 7.9468 9.52166 7.39862C9.74872 6.85045 9.80813 6.24725 9.69238 5.6653C9.57662 5.08336 9.2909 4.54881 8.87134 4.12925C8.45179 3.7097 7.91724 3.42398 7.3353 3.30822C6.75335 3.19247 6.15016 3.25188 5.60198 3.47894C5.05381 3.706 4.58527 4.09052 4.25562 4.58386C3.92598 5.07721 3.75002 5.65723 3.75002 6.25057C3.75002 7.04622 4.06609 7.80928 4.6287 8.37189C5.1913 8.9345 5.95437 9.25057 6.75002 9.25057Z" fill="#3B82F6"/>
+                      </svg>
+                      <span>Asignar</span>
+                    </button>
+                  )}
+                  <button className="action-button view" onClick={() => {
+                    setSelectedOrderId(order.id)
+                    setShowOrderDetails(true)
+                  }}>
                     <svg className="action-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M15.6875 7.69562C15.6644 7.645 15.1169 6.42937 13.9075 5.22C12.2894 3.60437 10.25 2.75 8 2.75C5.75 2.75 3.71063 3.60437 2.09438 5.22C0.885001 6.42937 0.337501 7.645 0.312501 7.69562C0.270159 7.79162 0.248291 7.89539 0.248291 8.00031C0.248291 8.10523 0.270159 8.209 0.312501 8.305C0.335626 8.35625 0.883126 9.57125 2.09313 10.7806C3.71063 12.3963 5.75 13.25 8 13.25C10.25 13.25 12.2894 12.3963 13.905 10.7806C15.115 9.57125 15.6625 8.35625 15.6856 8.305C15.7283 8.20913 15.7505 8.10543 15.7508 8.00051C15.7511 7.89559 15.7295 7.79175 15.6875 7.69562ZM12.8088 9.75813C11.4669 11.0794 9.84938 11.75 8 11.75C6.15063 11.75 4.53313 11.0794 3.19313 9.7575C2.66584 9.23577 2.21228 8.64447 1.845 8C2.21238 7.35579 2.66594 6.76471 3.19313 6.24312C4.53375 4.92062 6.15063 4.25 8 4.25C9.84938 4.25 11.4663 4.92062 12.8069 6.24312C13.3341 6.76467 13.7877 7.35575 14.155 8C13.7877 8.64443 13.3341 9.23572 12.8069 9.7575L12.8088 9.75813ZM8 5.25C7.4561 5.25 6.92442 5.41128 6.47218 5.71346C6.01995 6.01563 5.66747 6.44512 5.45933 6.94762C5.25119 7.45012 5.19673 8.00305 5.30284 8.5365C5.40895 9.06995 5.67086 9.55995 6.05546 9.94454C6.44005 10.3291 6.93006 10.5911 7.4635 10.6972C7.99695 10.8033 8.54988 10.7488 9.05238 10.5407C9.55488 10.3325 9.98437 9.98005 10.2865 9.52782C10.5887 9.07558 10.75 8.5439 10.75 8C10.7492 7.27091 10.4592 6.57192 9.94363 6.05637C9.42809 5.54082 8.72909 5.25083 8 5.25ZM8 9.25C7.75277 9.25 7.5111 9.17669 7.30554 9.03934C7.09998 8.90199 6.93976 8.70676 6.84515 8.47835C6.75054 8.24995 6.72579 7.99861 6.77402 7.75614C6.82225 7.51366 6.9413 7.29093 7.11612 7.11612C7.29093 6.9413 7.51366 6.82225 7.75614 6.77402C7.99861 6.72579 8.24995 6.75054 8.47836 6.84515C8.70676 6.93976 8.90199 7.09998 9.03934 7.30554C9.17669 7.5111 9.25 7.75277 9.25 8C9.25 8.33152 9.11831 8.64946 8.88388 8.88388C8.64946 9.1183 8.33152 9.25 8 9.25Z" fill="#1A1A2E"/>
                     </svg>
@@ -231,131 +416,7 @@ function App() {
                   </button>
                 </div>
               </div>
-
-              {/* Row 2 */}
-              <div className="table-row">
-                <div className="table-cell-order" data-label="Pedido">
-                  <span className="order-id">#P00124</span>
-                  <span className="order-date">15 Ene 2025</span>
-                </div>
-
-                <div className="table-cell-client" data-label="Cliente">
-                  <span className="client-name">TechMart SA</span>
-                  <span className="client-location">Monterrey</span>
-                </div>
-
-                <div className="table-cell-items" data-label="Items">
-                  <span className="items-count">28</span>
-                  <span className="items-label">items</span>
-                </div>
-
-                <div className="table-cell-operator" data-label="Operario">
-                  <span className="unassigned-text">Sin asignar</span>
-                </div>
-
-                <div className="table-cell-priority" data-label="Prioridad">
-                  <div className="priority-badge medium">MEDIA</div>
-                </div>
-
-                <div className="table-cell-status" data-label="Estado">
-                  <div className="status-badge pending">Pendiente</div>
-                </div>
-
-                <div className="table-cell-actions">
-                  <button className="action-button assign" onClick={() => setShowOrderDetails(true)}>
-                    <svg className="action-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M16 8.50057C16 8.69949 15.921 8.89025 15.7804 9.0309C15.6397 9.17156 15.4489 9.25057 15.25 9.25057H14.75V9.75057C14.75 9.94949 14.671 10.1403 14.5304 10.2809C14.3897 10.4216 14.1989 10.5006 14 10.5006C13.8011 10.5006 13.6103 10.4216 13.4697 10.2809C13.329 10.1403 13.25 9.94949 13.25 9.75057V9.25057H12.75C12.5511 9.25057 12.3603 9.17156 12.2197 9.0309C12.079 8.89025 12 8.69949 12 8.50057C12 8.30166 12.079 8.1109 12.2197 7.97024C12.3603 7.82959 12.5511 7.75057 12.75 7.75057H13.25V7.25057C13.25 7.05166 13.329 6.8609 13.4697 6.72024C13.6103 6.57959 13.8011 6.50057 14 6.50057C14.1989 6.50057 14.3897 6.57959 14.5304 6.72024C14.671 6.8609 14.75 7.05166 14.75 7.25057V7.75057H15.25C15.4489 7.75057 15.6397 7.82959 15.7804 7.97024C15.921 8.1109 16 8.30166 16 8.50057ZM12.5744 12.0181C12.7024 12.1704 12.7646 12.3673 12.7473 12.5655C12.7301 12.7637 12.6349 12.947 12.4825 13.0749C12.3302 13.2029 12.1333 13.2651 11.9351 13.2479C11.7369 13.2307 11.5536 13.1354 11.4256 12.9831C10.57 11.9643 9.06252 10.7506 6.75002 10.7506C4.9444 10.7506 3.28377 11.5431 2.0744 12.9831C1.94643 13.1354 1.76319 13.2307 1.56499 13.2479C1.36678 13.2651 1.16986 13.2029 1.01752 13.0749C0.865188 12.947 0.769928 12.7637 0.752698 12.5655C0.735468 12.3673 0.79768 12.1704 0.925647 12.0181C1.74048 11.034 2.78583 10.2664 3.96877 9.7837C3.23317 9.20537 2.69614 8.41211 2.43243 7.51432C2.16872 6.61652 2.19143 5.65885 2.49742 4.77457C2.80341 3.89029 3.37744 3.12339 4.13964 2.58059C4.90185 2.03779 5.8143 1.74609 6.75002 1.74609C7.68575 1.74609 8.5982 2.03779 9.3604 2.58059C10.1226 3.12339 10.6966 3.89029 11.0026 4.77457C11.3086 5.65885 11.3313 6.61652 11.0676 7.51432C10.8039 8.41211 10.2669 9.20537 9.53127 9.7837C10.7143 10.2663 11.7597 11.0338 12.5744 12.0181ZM6.75002 9.25057C7.34337 9.25057 7.92339 9.07463 8.41673 8.74498C8.91008 8.41534 9.2946 7.9468 9.52166 7.39862C9.74872 6.85045 9.80813 6.24725 9.69238 5.6653C9.57662 5.08336 9.2909 4.54881 8.87134 4.12925C8.45179 3.7097 7.91724 3.42397 7.33529 3.30822C6.75335 3.19246 6.15015 3.25187 5.60197 3.47894C5.05379 3.706 4.58526 4.09052 4.25561 4.58386C3.92597 5.07721 3.75002 5.65723 3.75002 6.25057C3.75085 7.04597 4.06719 7.80855 4.62962 8.37098C5.19205 8.93341 5.95463 9.24975 6.75002 9.25057Z" fill="white"/>
-                    </svg>
-                    <span>Asignar</span>
-                  </button>
-                  <button className="action-button view">
-                    <svg className="action-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M15.6875 7.69562C15.6644 7.645 15.1169 6.42937 13.9075 5.22C12.2894 3.60437 10.25 2.75 8 2.75C5.75 2.75 3.71063 3.60437 2.09438 5.22C0.885001 6.42937 0.337501 7.645 0.312501 7.69562C0.270159 7.79162 0.248291 7.89539 0.248291 8.00031C0.248291 8.10523 0.270159 8.209 0.312501 8.305C0.335626 8.35625 0.883126 9.57125 2.09313 10.7806C3.71063 12.3963 5.75 13.25 8 13.25C10.25 13.25 12.2894 12.3963 13.905 10.7806C15.115 9.57125 15.6625 8.35625 15.6856 8.305C15.7283 8.20913 15.7505 8.10543 15.7508 8.00051C15.7511 7.89559 15.7295 7.79175 15.6875 7.69562ZM12.8088 9.75813C11.4669 11.0794 9.84938 11.75 8 11.75C6.15063 11.75 4.53313 11.0794 3.19313 9.7575C2.66584 9.23577 2.21228 8.64447 1.845 8C2.21238 7.35579 2.66594 6.76471 3.19313 6.24312C4.53375 4.92062 6.15063 4.25 8 4.25C9.84938 4.25 11.4663 4.92062 12.8069 6.24312C13.3341 6.76467 13.7877 7.35575 14.155 8C13.7877 8.64443 13.3341 9.23572 12.8069 9.7575L12.8088 9.75813ZM8 5.25C7.4561 5.25 6.92442 5.41128 6.47218 5.71346C6.01995 6.01563 5.66747 6.44512 5.45933 6.94762C5.25119 7.45012 5.19673 8.00305 5.30284 8.5365C5.40895 9.06995 5.67086 9.55995 6.05546 9.94454C6.44005 10.3291 6.93006 10.5911 7.4635 10.6972C7.99695 10.8033 8.54988 10.7488 9.05238 10.5407C9.55488 10.3325 9.98437 9.98005 10.2865 9.52782C10.5887 9.07558 10.75 8.5439 10.75 8C10.7492 7.27091 10.4592 6.57192 9.94363 6.05637C9.42809 5.54082 8.72909 5.25083 8 5.25ZM8 9.25C7.75277 9.25 7.5111 9.17669 7.30554 9.03934C7.09998 8.90199 6.93976 8.70676 6.84515 8.47835C6.75054 8.24995 6.72579 7.99861 6.77402 7.75614C6.82225 7.51366 6.9413 7.29093 7.11612 7.11612C7.29093 6.9413 7.51366 6.82225 7.75614 6.77402C7.99861 6.72579 8.24995 6.75054 8.47836 6.84515C8.70676 6.93976 8.90199 7.09998 9.03934 7.30554C9.17669 7.5111 9.25 7.75277 9.25 8C9.25 8.33152 9.11831 8.64946 8.88388 8.88388C8.64946 9.1183 8.33152 9.25 8 9.25Z" fill="#1A1A2E"/>
-                    </svg>
-                    <span>Ver</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Row 3 */}
-              <div className="table-row">
-                <div className="table-cell-order" data-label="Pedido">
-                  <span className="order-id">#P00125</span>
-                  <span className="order-date">15 Ene 2025</span>
-                </div>
-
-                <div className="table-cell-client" data-label="Cliente">
-                  <span className="client-name">Home Depot MX</span>
-                  <span className="client-location">Guadalajara</span>
-                </div>
-
-                <div className="table-cell-items" data-label="Items">
-                  <span className="items-count">45</span>
-                  <span className="items-label">items</span>
-                </div>
-
-                <div className="table-cell-operator" data-label="Operario">
-                  <div className="operator-avatar"></div>
-                  <span className="operator-name">Ana García</span>
-                </div>
-
-                <div className="table-cell-priority" data-label="Prioridad">
-                  <div className="priority-badge high">ALTA</div>
-                </div>
-
-                <div className="table-cell-status" data-label="Estado">
-                  <div className="status-badge in-progress">En Progreso</div>
-                </div>
-
-                <div className="table-cell-actions">
-                  <button className="action-button view">
-                    <svg className="action-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M15.6875 7.69562C15.6644 7.645 15.1169 6.42937 13.9075 5.22C12.2894 3.60437 10.25 2.75 8 2.75C5.75 2.75 3.71063 3.60437 2.09438 5.22C0.885001 6.42937 0.337501 7.645 0.312501 7.69562C0.270159 7.79162 0.248291 7.89539 0.248291 8.00031C0.248291 8.10523 0.270159 8.209 0.312501 8.305C0.335626 8.35625 0.883126 9.57125 2.09313 10.7806C3.71063 12.3963 5.75 13.25 8 13.25C10.25 13.25 12.2894 12.3963 13.905 10.7806C15.115 9.57125 15.6625 8.35625 15.6856 8.305C15.7283 8.20913 15.7505 8.10543 15.7508 8.00051C15.7511 7.89559 15.7295 7.79175 15.6875 7.69562ZM12.8088 9.75813C11.4669 11.0794 9.84938 11.75 8 11.75C6.15063 11.75 4.53313 11.0794 3.19313 9.7575C2.66584 9.23577 2.21228 8.64447 1.845 8C2.21238 7.35579 2.66594 6.76471 3.19313 6.24312C4.53375 4.92062 6.15063 4.25 8 4.25C9.84938 4.25 11.4663 4.92062 12.8069 6.24312C13.3341 6.76467 13.7877 7.35575 14.155 8C13.7877 8.64443 13.3341 9.23572 12.8069 9.7575L12.8088 9.75813ZM8 5.25C7.4561 5.25 6.92442 5.41128 6.47218 5.71346C6.01995 6.01563 5.66747 6.44512 5.45933 6.94762C5.25119 7.45012 5.19673 8.00305 5.30284 8.5365C5.40895 9.06995 5.67086 9.55995 6.05546 9.94454C6.44005 10.3291 6.93006 10.5911 7.4635 10.6972C7.99695 10.8033 8.54988 10.7488 9.05238 10.5407C9.55488 10.3325 9.98437 9.98005 10.2865 9.52782C10.5887 9.07558 10.75 8.5439 10.75 8C10.7492 7.27091 10.4592 6.57192 9.94363 6.05637C9.42809 5.54082 8.72909 5.25083 8 5.25ZM8 9.25C7.75277 9.25 7.5111 9.17669 7.30554 9.03934C7.09998 8.90199 6.93976 8.70676 6.84515 8.47835C6.75054 8.24995 6.72579 7.99861 6.77402 7.75614C6.82225 7.51366 6.9413 7.29093 7.11612 7.11612C7.29093 6.9413 7.51366 6.82225 7.75614 6.77402C7.99861 6.72579 8.24995 6.75054 8.47836 6.84515C8.70676 6.93976 8.90199 7.09998 9.03934 7.30554C9.17669 7.5111 9.25 7.75277 9.25 8C9.25 8.33152 9.11831 8.64946 8.88388 8.88388C8.64946 9.1183 8.33152 9.25 8 9.25Z" fill="#1A1A2E"/>
-                    </svg>
-                    <span>Ver</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Row 4 */}
-              <div className="table-row">
-                <div className="table-cell-order" data-label="Pedido">
-                  <span className="order-id">#P00126</span>
-                  <span className="order-date">14 Ene 2025</span>
-                </div>
-
-                <div className="table-cell-client" data-label="Cliente">
-                  <span className="client-name">Liverpool</span>
-                  <span className="client-location">Puebla</span>
-                </div>
-
-                <div className="table-cell-items" data-label="Items">
-                  <span className="items-count">18</span>
-                  <span className="items-label">items</span>
-                </div>
-
-                <div className="table-cell-operator" data-label="Operario">
-                  <div className="operator-avatar"></div>
-                  <span className="operator-name">Luis Ramírez</span>
-                </div>
-
-                <div className="table-cell-priority" data-label="Prioridad">
-                  <div className="priority-badge low">BAJA</div>
-                </div>
-
-                <div className="table-cell-status" data-label="Estado">
-                  <div className="status-badge completed">Completado</div>
-                </div>
-
-                <div className="table-cell-actions">
-                  <button className="action-button view">
-                    <svg className="action-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M15.6875 7.69562C15.6644 7.645 15.1169 6.42937 13.9075 5.22C12.2894 3.60437 10.25 2.75 8 2.75C5.75 2.75 3.71063 3.60437 2.09438 5.22C0.885001 6.42937 0.337501 7.645 0.312501 7.69562C0.270159 7.79162 0.248291 7.89539 0.248291 8.00031C0.248291 8.10523 0.270159 8.209 0.312501 8.305C0.335626 8.35625 0.883126 9.57125 2.09313 10.7806C3.71063 12.3963 5.75 13.25 8 13.25C10.25 13.25 12.2894 12.3963 13.905 10.7806C15.115 9.57125 15.6625 8.35625 15.6856 8.305C15.7283 8.20913 15.7505 8.10543 15.7508 8.00051C15.7511 7.89559 15.7295 7.79175 15.6875 7.69562ZM12.8088 9.75813C11.4669 11.0794 9.84938 11.75 8 11.75C6.15063 11.75 4.53313 11.0794 3.19313 9.7575C2.66584 9.23577 2.21228 8.64447 1.845 8C2.21238 7.35579 2.66594 6.76471 3.19313 6.24312C4.53375 4.92062 6.15063 4.25 8 4.25C9.84938 4.25 11.4663 4.92062 12.8069 6.24312C13.3341 6.76467 13.7877 7.35575 14.155 8C13.7877 8.64443 13.3341 9.23572 12.8069 9.7575L12.8088 9.75813ZM8 5.25C7.4561 5.25 6.92442 5.41128 6.47218 5.71346C6.01995 6.01563 5.66747 6.44512 5.45933 6.94762C5.25119 7.45012 5.19673 8.00305 5.30284 8.5365C5.40895 9.06995 5.67086 9.55995 6.05546 9.94454C6.44005 10.3291 6.93006 10.5911 7.4635 10.6972C7.99695 10.8033 8.54988 10.7488 9.05238 10.5407C9.55488 10.3325 9.98437 9.98005 10.2865 9.52782C10.5887 9.07558 10.75 8.5439 10.75 8C10.7492 7.27091 10.4592 6.57192 9.94363 6.05637C9.42809 5.54082 8.72909 5.25083 8 5.25ZM8 9.25C7.75277 9.25 7.5111 9.17669 7.30554 9.03934C7.09998 8.90199 6.93976 8.70676 6.84515 8.47835C6.75054 8.24995 6.72579 7.99861 6.77402 7.75614C6.82225 7.51366 6.9413 7.29093 7.11612 7.11612C7.29093 6.9413 7.51366 6.82225 7.75614 6.77402C7.99861 6.72579 8.24995 6.75054 8.47836 6.84515C8.70676 6.93976 8.90199 7.09998 9.03934 7.30554C9.17669 7.5111 9.25 7.75277 9.25 8C9.25 8.33152 9.11831 8.64946 8.88388 8.88388C8.64946 9.1183 8.33152 9.25 8 9.25Z" fill="#1A1A2E"/>
-                    </svg>
-                    <span>Ver</span>
-                  </button>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
