@@ -511,6 +511,67 @@ body {
   color: #4338CA;
 }
 
+/* Priority Select */
+.priority-select {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  width: 100%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 28px;
+}
+
+.priority-select:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.priority-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.priority-select.high {
+  background-color: #FEF3C7;
+  color: #92400E;
+}
+
+.priority-select.high:hover {
+  background-color: #FDE68A;
+  border-color: #F59E0B;
+}
+
+.priority-select.medium {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+}
+
+.priority-select.medium:hover {
+  background-color: #BFDBFE;
+  border-color: #3B82F6;
+}
+
+.priority-select.low {
+  background-color: #E0E7FF;
+  color: #4338CA;
+}
+
+.priority-select.low:hover {
+  background-color: #C7D2FE;
+  border-color: #6366F1;
+}
+
 .status-badge.in-progress {
   background: #DCFCE7;
   color: #166534;

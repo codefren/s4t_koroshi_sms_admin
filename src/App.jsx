@@ -51,6 +51,40 @@ function App() {
     return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
+  // Función para actualizar la prioridad de una orden
+  const updateOrderPriority = async (orderId, newPriority) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/orders/${orderId}/priority`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+        body: JSON.stringify({
+          prioridad: newPriority
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Error al actualizar prioridad: ${response.status}`)
+      }
+
+      const updatedOrder = await response.json()
+      
+      // Actualizar la orden en el estado local
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...order, prioridad: updatedOrder.prioridad } : order
+        )
+      )
+
+      return true
+    } catch (err) {
+      console.error('Error al actualizar prioridad:', err)
+      return false
+    }
+  }
+
   // Función para cargar órdenes desde la API
   const fetchOrders = async (isAutoRefresh = false) => {
     try {
@@ -382,9 +416,23 @@ function App() {
                 </div>
 
                 <div className="table-cell-priority" data-label="Prioridad">
-                  <div className={`priority-badge ${getPriorityClass(order.prioridad)}`}>
-                    {getPriorityLabel(order.prioridad)}
-                  </div>
+                  <select
+                    className={`priority-select ${getPriorityClass(order.prioridad)}`}
+                    value={order.prioridad}
+                    onChange={async (e) => {
+                      const newPriority = e.target.value
+                      const success = await updateOrderPriority(order.id, newPriority)
+                      if (!success) {
+                        // Revertir si falla
+                        e.target.value = order.prioridad
+                      }
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <option value="NORMAL">🟢 Normal</option>
+                    <option value="HIGH">🟠 Alta</option>
+                    <option value="URGENT">🔴 Urgente</option>
+                  </select>
                 </div>
 
                 <div className="table-cell-status" data-label="Estado">
