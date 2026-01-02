@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import OrderDetails from './OrderDetails'
+import Products from './Products'
 
 function App() {
+  const [currentView, setCurrentView] = useState('orders') // 'orders' or 'products'
   const [showOrderDetails, setShowOrderDetails] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState(null)
   const [orders, setOrders] = useState([])
