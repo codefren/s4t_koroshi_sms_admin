@@ -156,6 +156,10 @@ function App() {
     }} orderId={selectedOrderId} />
   }
 
+  if (currentView === 'products') {
+    return <Products onBack={() => setCurrentView('orders')} />
+  }
+
   return (
     <div className="dashboard">
       {/* Sidebar */}
