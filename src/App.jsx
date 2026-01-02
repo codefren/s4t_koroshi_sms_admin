@@ -207,6 +207,10 @@ function App() {
 
       {/* Main Content */}
       <main className="main-content">
+        {currentView === 'products' ? (
+          <Products />
+        ) : (
+          <>
         {/* Dashboard Header */}
         <header className="dashboard-header">
           <div className="header-left">
@@ -476,6 +480,8 @@ function App() {
             </div>
           </div>
         </div>
+          </>
+        )}
       </main>
     </div>
   )
