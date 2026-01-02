@@ -208,7 +208,7 @@ function App() {
       {/* Main Content */}
       <main className="main-content">
         {currentView === 'products' ? (
-          <Products />
+          <Products onBack={() => setCurrentView('orders')} />
         ) : (
           <>
         {/* Dashboard Header */}
