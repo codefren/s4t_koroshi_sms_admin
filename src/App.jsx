@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import OrderDetails from './OrderDetails'
 import Products from './Products'
+import Operators from './Operators'
 
 function App() {
-  const [currentView, setCurrentView] = useState('orders') // 'orders' or 'products'
+  const [currentView, setCurrentView] = useState('orders') // 'orders', 'products', or 'operators'
   const [showOrderDetails, setShowOrderDetails] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState(null)
   const [orders, setOrders] = useState([])
@@ -209,6 +210,8 @@ function App() {
       <main className="main-content">
         {currentView === 'products' ? (
           <Products onBack={() => setCurrentView('orders')} />
+        ) : currentView === 'operators' ? (
+          <Operators />
         ) : (
           <>
         {/* Dashboard Header */}
