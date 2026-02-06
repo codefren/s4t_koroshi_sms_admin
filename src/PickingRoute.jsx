@@ -1,71 +1,77 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './PickingRoute.css'
+import { useLocations } from './hooks/useLocations'
+import { productService } from './services/productService'
 
 function PickingRoute({ onBack, product }) {
+  // Estados del formulario
   const [formData, setFormData] = useState({
-    pasillo: 'A-12',
+    pasillo: '',
     lado: 'Izquierdo',
-    ubicacion: 'B3-15',
-    altura: 'Nivel 2',
-    stockMinimo: '25',
+    ubicacion: '',
+    altura: 'Nivel 1',
+    stockMinimo: '10',
     ordenRecorrido: 'ascendente'
   })
 
-  const [locations, setLocations] = useState([
-    {
-      id: 1,
-      pasillo: 'A-12',
-      lado: 'Izquierdo',
-      ubicacion: 'B3-15',
-      zona: 'Zona A',
-      altura: 'Nivel 2',
-      stockActual: 45,
-      stockMax: 60,
-      stockMin: 25,
-      stockPercent: 75,
-      stockStatus: 'good'
-    },
-    {
-      id: 2,
-      pasillo: 'A-12',
-      lado: 'Derecho',
-      ubicacion: 'C2-08',
-      zona: 'Zona A',
-      altura: 'Nivel 1',
-      stockActual: 33,
-      stockMax: 60,
-      stockMin: 25,
-      stockPercent: 55,
-      stockStatus: 'good'
-    },
-    {
-      id: 3,
-      pasillo: 'B-08',
-      lado: 'Izquierdo',
-      ubicacion: 'A1-22',
-      zona: 'Zona B',
-      altura: 'Nivel 3',
-      stockActual: 18,
-      stockMax: 60,
-      stockMin: 25,
-      stockPercent: 30,
-      stockStatus: 'low'
-    },
-    {
-      id: 4,
-      pasillo: 'C-15',
-      lado: 'Derecho',
-      ubicacion: 'D4-05',
-      zona: 'Zona C',
-      altura: 'Nivel 1',
-      stockActual: 51,
-      stockMax: 60,
-      stockMin: 25,
-      stockPercent: 85,
-      stockStatus: 'good'
-    }
-  ])
+  // Estados para producto y ubicaciones
+  const [productDetail, setProductDetail] = useState(null)
+  const [loadingProduct, setLoadingProduct] = useState(true)
+  const [editingLocation, setEditingLocation] = useState(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [formErrors, setFormErrors] = useState({})
 
+  // Hook para gestión de ubicaciones
+  const {
+    locations,
+    totalLocations,
+    loading: loadingLocations,
+    error: locationsError,
+    addLocation,
+    updateLocation,
+    removeLocation,
+    clearError
+  } = useLocations(product?.id)
+
+  // Cargar detalle del producto al montar
+  useEffect(() => {
+    const fetchProductDetail = async () => {
+      if (!product?.id) {
+        setLoadingProduct(false)
+        return
+      }
+
+      try {
+        setLoadingProduct(true)
+        const data = await productService.getById(product.id)
+        setProductDetail(data)
+      } catch (err) {
+        console.error('Error al cargar producto:', err)
+      } finally {
+        setLoadingProduct(false)
+      }
+    }
+
+    fetchProductDetail()
+  }, [product?.id])
+
+  // Limpiar mensajes después de 3 segundos
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(''), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [successMessage])
+
+  useEffect(() => {
+    if (locationsError) {
+      const timer = setTimeout(() => clearError(), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [locationsError, clearError])
+
+  // Helpers
   const getStockColor = (status) => {
     if (status === 'low') return 'linear-gradient(315deg, #E74C3C 64.64%, #C0392B 135.36%)'
     return 'linear-gradient(315deg, #2ECC71 64.64%, #27AE60 135.36%)'
@@ -74,6 +80,118 @@ function PickingRoute({ onBack, product }) {
   const getStockTextColor = (status) => {
     return status === 'low' ? '#E74C3C' : '#2ECC71'
   }
+
+  // Validación del formulario
+  const validateForm = () => {
+    const errors = {}
+    
+    if (!formData.pasillo || formData.pasillo.trim() === '') {
+      errors.pasillo = 'El pasillo es requerido'
+    }
+    if (!formData.ubicacion || formData.ubicacion.trim() === '') {
+      errors.ubicacion = 'La ubicación es requerida'
+    }
+    if (!formData.lado) {
+      errors.lado = 'El lado es requerido'
+    }
+    if (!formData.altura) {
+      errors.altura = 'La altura es requerida'
+    }
+    if (formData.stockMinimo && parseInt(formData.stockMinimo) < 0) {
+      errors.stockMinimo = 'El stock mínimo no puede ser negativo'
+    }
+
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  // Manejar añadir ubicación
+  const handleAddLocation = async () => {
+    if (!validateForm()) {
+      return
+    }
+
+    const locationData = {
+      pasillo: formData.pasillo,
+      lado: formData.lado,
+      ubicacion: formData.ubicacion,
+      altura: formData.altura,
+      stockMinimo: parseInt(formData.stockMinimo) || 0,
+      stockActual: 0,
+      prioridad: 3,
+      activa: true
+    }
+
+    const result = await addLocation(locationData)
+
+    if (result.success) {
+      setSuccessMessage('Ubicación añadida exitosamente')
+      // Resetear formulario
+      setFormData({
+        pasillo: '',
+        lado: 'Izquierdo',
+        ubicacion: '',
+        altura: 'Nivel 1',
+        stockMinimo: '10',
+        ordenRecorrido: formData.ordenRecorrido
+      })
+      setFormErrors({})
+    }
+  }
+
+  // Manejar edición de ubicación
+  const handleEditClick = (location) => {
+    setEditingLocation({
+      ...location,
+      pasillo: location.pasillo,
+      lado: location.lado,
+      ubicacion: location.ubicacionCode || location.ubicacion,
+      altura: location.altura,
+      stockMinimo: location.stock_min.toString()
+    })
+    setShowEditModal(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingLocation) return
+
+    const updates = {
+      pasillo: editingLocation.pasillo,
+      lado: editingLocation.lado,
+      ubicacion: editingLocation.ubicacion,
+      altura: editingLocation.altura,
+      stockMinimo: parseInt(editingLocation.stockMinimo) || 0
+    }
+
+    const result = await updateLocation(editingLocation.location_id, updates)
+
+    if (result.success) {
+      setSuccessMessage('Ubicación actualizada exitosamente')
+      setShowEditModal(false)
+      setEditingLocation(null)
+    }
+  }
+
+  // Manejar eliminación
+  const handleDeleteClick = async (location) => {
+    if (!window.confirm(`¿Está seguro de eliminar la ubicación ${location.ubicacion}?`)) {
+      return
+    }
+
+    const result = await removeLocation(location.location_id)
+
+    if (result.success) {
+      setSuccessMessage('Ubicación eliminada exitosamente')
+    }
+  }
+
+  // Opciones para los selectores
+  const PASILLOS_OPTIONS = ['A', 'B', 'B3', 'C', 'D', 'E', 'F', 'G', 'H']
+  const LADOS_OPTIONS = ['Izquierdo', 'Derecho']
+  const ALTURAS_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+  // Estados de carga
+  const isLoading = loadingProduct || loadingLocations
 
   return (
     <div className="picking-route-container">
@@ -90,6 +208,25 @@ function PickingRoute({ onBack, product }) {
         </div>
       </div>
 
+      {/* Mensajes */}
+      {successMessage && (
+        <div className="success-message">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M10 0C4.48 0 0 4.48 0 10C0 15.52 4.48 20 10 20C15.52 20 20 15.52 20 10C20 4.48 15.52 0 10 0ZM8 15L3 10L4.41 8.59L8 12.17L15.59 4.58L17 6L8 15Z" fill="#2ECC71"/>
+          </svg>
+          <span>{successMessage}</span>
+        </div>
+      )}
+
+      {locationsError && (
+        <div className="error-message">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M10 0C4.48 0 0 4.48 0 10C0 15.52 4.48 20 10 20C15.52 20 20 15.52 20 10C20 4.48 15.52 0 10 0ZM11 15H9V13H11V15ZM11 11H9V5H11V11Z" fill="#E74C3C"/>
+          </svg>
+          <span>{locationsError}</span>
+        </div>
+      )}
+
       {/* Content Area */}
       <div className="picking-route-content">
         {/* Product Info Card */}
@@ -105,7 +242,7 @@ function PickingRoute({ onBack, product }) {
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M16.25 10.625H3.75C3.41848 10.625 3.10054 10.7567 2.86612 10.9911C2.6317 11.2255 2.5 11.5435 2.5 11.875V15C2.5 15.3315 2.6317 15.6495 2.86612 15.8839C3.10054 16.1183 3.41848 16.25 3.75 16.25H16.25C16.5815 16.25 16.8995 16.1183 17.1339 15.8839C17.3683 15.6495 17.5 15.3315 17.5 15V11.875C17.5 11.5435 17.3683 11.2255 17.1339 10.9911C16.8995 10.7567 16.5815 10.625 16.25 10.625ZM16.25 15H3.75V11.875H16.25V15ZM16.25 3.75H3.75C3.41848 3.75 3.10054 3.8817 2.86612 4.11612C2.6317 4.35054 2.5 4.66848 2.5 5V8.125C2.5 8.45652 2.6317 8.77446 2.86612 9.00888C3.10054 9.2433 3.41848 9.375 3.75 9.375H16.25C16.5815 9.375 16.8995 9.2433 17.1339 9.00888C17.3683 8.77446 17.5 8.45652 17.5 8.125V5C17.5 4.66848 17.3683 4.35054 17.1339 4.11612C16.8995 3.8817 16.5815 3.75 16.25 3.75ZM16.25 8.125H3.75V5H16.25V8.125Z" fill="#667EEA"/>
                 </svg>
-                <span className="input-text">2523HA02</span>
+                <span className="input-text">{productDetail?.sku || product?.sku || '-'}</span>
               </div>
             </div>
 
@@ -115,7 +252,7 @@ function PickingRoute({ onBack, product }) {
                 <svg width="18" height="20" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M17.16 4.3081L9.5975 0.170212C9.39544 0.0585639 9.16836 0 8.9375 0C8.70664 0 8.47956 0.0585639 8.2775 0.170212L0.715 4.30982C0.499029 4.42799 0.318745 4.60197 0.192974 4.81361C0.0672033 5.02524 0.000558815 5.26676 0 5.51295V13.732C0.000558815 13.9782 0.0672033 14.2197 0.192974 14.4313C0.318745 14.643 0.499029 14.817 0.715 14.9351L8.2775 19.0747C8.47956 19.1864 8.70664 19.245 8.9375 19.245C9.16836 19.245 9.39544 19.1864 9.5975 19.0747L17.16 14.9351C17.376 14.817 17.5563 14.643 17.682 14.4313C17.8078 14.2197 17.8744 13.9782 17.875 13.732V5.51381C17.8749 5.26718 17.8085 5.02513 17.6827 4.813C17.5569 4.60087 17.3764 4.42648 17.16 4.3081ZM8.9375 1.37334L15.8417 5.15459L13.2834 6.55537L6.37828 2.77412L8.9375 1.37334ZM8.9375 8.93584L2.03328 5.15459L4.94656 3.55959L11.8508 7.34084L8.9375 8.93584ZM1.375 6.35771L8.25 10.1201V17.4926L1.375 13.7329V6.35771ZM16.5 13.7294L9.625 17.4926V10.1235L12.375 8.61873V11.6858C12.375 11.8682 12.4474 12.043 12.5764 12.172C12.7053 12.3009 12.8802 12.3733 13.0625 12.3733C13.2448 12.3733 13.4197 12.3009 13.5486 12.172C13.6776 12.043 13.75 11.8682 13.75 11.6858V7.86592L16.5 6.35771V13.7286V13.7294Z" fill="#667EEA"/>
                 </svg>
-                <span className="input-text">VESTIDO CORTO MINI ESTAMPADO MANGA LARGA</span>
+                <span className="input-text">{productDetail?.nombre_producto || product?.name || '-'}</span>
               </div>
             </div>
           </div>
@@ -127,7 +264,7 @@ function PickingRoute({ onBack, product }) {
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M15.625 13.125C15.0707 13.1255 14.5323 13.3099 14.0941 13.6492C13.6558 13.9885 13.3425 14.4635 13.2031 15H5.625C4.96196 15 4.32607 14.7366 3.85723 14.2678C3.38839 13.7989 3.125 13.163 3.125 12.5C3.125 11.837 3.38839 11.2011 3.85723 10.7322C4.32607 10.2634 4.96196 10 5.625 10H13.125C13.9538 10 14.7487 9.67076 15.3347 9.08471C15.9208 8.49866 16.25 7.7038 16.25 6.875C16.25 6.0462 15.9208 5.25134 15.3347 4.66529C14.7487 4.07924 13.9538 3.75 13.125 3.75H5.625C5.45924 3.75 5.30027 3.81585 5.18306 3.93306C5.06585 4.05027 5 4.20924 5 4.375C5 4.54076 5.06585 4.69973 5.18306 4.81694C5.30027 4.93415 5.45924 5 5.625 5H13.125C13.6223 5 14.0992 5.19754 14.4508 5.54917C14.8025 5.90081 15 6.37772 15 6.875C15 7.37228 14.8025 7.84919 14.4508 8.20083C14.0992 8.55246 13.6223 8.75 13.125 8.75H5.625C4.63044 8.75 3.67661 9.14509 2.97335 9.84835C2.27009 10.5516 1.875 11.5054 1.875 12.5C1.875 13.4946 2.27009 14.4484 2.97335 15.1517C3.67661 15.8549 4.63044 16.25 5.625 16.25H13.2031C13.32 16.7027 13.5615 17.1135 13.9001 17.4359C14.2388 17.7582 14.661 17.9791 15.1189 18.0735C15.5768 18.1679 16.052 18.132 16.4906 17.9699C16.9291 17.8078 17.3134 17.526 17.5998 17.1564C17.8862 16.7869 18.0632 16.3444 18.1108 15.8793C18.1583 15.4142 18.0745 14.9451 17.8689 14.5252C17.6632 14.1054 17.3439 13.7516 16.9473 13.5041C16.5506 13.2566 16.0925 13.1252 15.625 13.125ZM15.625 16.875C15.3778 16.875 15.1361 16.8017 14.9305 16.6643C14.725 16.527 14.5648 16.3318 14.4701 16.1034C14.3755 15.8749 14.3508 15.6236 14.399 15.3811C14.4472 15.1387 14.5663 14.9159 14.7411 14.7411C14.9159 14.5663 15.1387 14.4472 15.3811 14.399C15.6236 14.3508 15.8749 14.3755 16.1034 14.4701C16.3318 14.5648 16.527 14.725 16.6643 14.9305C16.8017 15.1361 16.875 15.3778 16.875 15.625C16.875 15.9565 16.7433 16.2745 16.5089 16.5089C16.2745 16.7433 15.9565 16.875 15.625 16.875Z" fill="#667EEA"/>
                 </svg>
-                <span className="input-text">000011</span>
+                <span className="input-text">{productDetail?.color_id || product?.category || '-'}</span>
               </div>
             </div>
 
@@ -137,7 +274,7 @@ function PickingRoute({ onBack, product }) {
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M18.0407 16.5627C16.8508 14.5056 15.0172 13.0306 12.8774 12.3314C13.9358 11.7013 14.7582 10.7412 15.2182 9.59845C15.6781 8.45573 15.7503 7.19361 15.4235 6.00592C15.0968 4.81823 14.3892 3.77064 13.4094 3.02402C12.4296 2.2774 11.2318 1.87305 10 1.87305C8.76821 1.87305 7.57044 2.2774 6.59067 3.02402C5.6109 3.77064 4.90331 4.81823 4.57654 6.00592C4.24978 7.19361 4.32193 8.45573 4.78189 9.59845C5.24186 10.7412 6.06422 11.7013 7.12268 12.3314C4.98284 13.0299 3.14925 14.5049 1.9594 16.5627C1.91577 16.6338 1.88683 16.713 1.87429 16.7955C1.86174 16.878 1.86585 16.9622 1.88638 17.0431C1.9069 17.124 1.94341 17.2 1.99377 17.2665C2.04413 17.3331 2.10731 17.3889 2.17958 17.4306C2.25185 17.4724 2.33175 17.4992 2.41457 17.5096C2.49738 17.5199 2.58143 17.5136 2.66176 17.491C2.74209 17.4683 2.81708 17.4298 2.88228 17.3777C2.94749 17.3256 3.00161 17.261 3.04143 17.1877C4.51331 14.6439 7.11487 13.1252 10 13.1252C12.8852 13.1252 15.4867 14.6439 16.9586 17.1877C16.9985 17.261 17.0526 17.3256 17.1178 17.3777C17.183 17.4298 17.258 17.4683 17.3383 17.491C17.4186 17.5136 17.5027 17.5199 17.5855 17.5096C17.6683 17.4992 17.7482 17.4724 17.8205 17.4306C17.8927 17.3889 17.9559 17.3331 18.0063 17.2665C18.0566 17.2 18.0932 17.124 18.1137 17.0431C18.1342 16.9622 18.1383 16.878 18.1258 16.7955C18.1132 16.713 18.0843 16.6338 18.0407 16.5627ZM5.62503 7.50017C5.62503 6.63488 5.88162 5.78902 6.36235 5.06955C6.84308 4.35009 7.52636 3.78933 8.32579 3.4582C9.12522 3.12707 10.0049 3.04043 10.8535 3.20924C11.7022 3.37805 12.4818 3.79473 13.0936 4.40658C13.7055 5.01843 14.1222 5.79799 14.291 6.64665C14.4598 7.49532 14.3731 8.37499 14.042 9.17441C13.7109 9.97384 13.1501 10.6571 12.4306 11.1379C11.7112 11.6186 10.8653 11.8752 10 11.8752C8.84009 11.8739 7.72801 11.4126 6.90781 10.5924C6.0876 9.77219 5.62627 8.66011 5.62503 7.50017Z" fill="#667EEA"/>
                 </svg>
-                <span className="input-text">UNI</span>
+                <span className="input-text">{productDetail?.talla || product?.size || '-'}</span>
               </div>
             </div>
           </div>
@@ -151,66 +288,75 @@ function PickingRoute({ onBack, product }) {
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Pasillo</label>
-              <div className="form-input-select">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16.25 10.625H3.75C3.41848 10.625 3.10054 10.7567 2.86612 10.9911C2.6317 11.2255 2.5 11.5435 2.5 11.875V15C2.5 15.3315 2.6317 15.6495 2.86612 15.8839C3.10054 16.1183 3.41848 16.25 3.75 16.25H16.25C16.5815 16.25 16.8995 16.1183 17.1339 15.8839C17.3683 15.6495 17.5 15.3315 17.5 15V11.875C17.5 11.5435 17.3683 11.2255 17.1339 10.9911C16.8995 10.7567 16.5815 10.625 16.25 10.625ZM16.25 15H3.75V11.875H16.25V15ZM16.25 3.75H3.75C3.41848 3.75 3.10054 3.8817 2.86612 4.11612C2.6317 4.35054 2.5 4.66848 2.5 5V8.125C2.5 8.45652 2.6317 8.77446 2.86612 9.00888C3.10054 9.2433 3.41848 9.375 3.75 9.375H16.25C16.5815 9.375 16.8995 9.2433 17.1339 9.00888C17.3683 8.77446 17.5 8.45652 17.5 8.125V5C17.5 4.66848 17.3683 4.35054 17.1339 4.11612C16.8995 3.8817 16.5815 3.75 16.25 3.75ZM16.25 8.125H3.75V5H16.25V8.125Z" fill="#667EEA"/>
-                </svg>
-                <span className="input-text">A-12</span>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M13.5306 6.53122L8.5306 11.5312C8.46092 11.6011 8.37813 11.6566 8.28696 11.6945C8.1958 11.7323 8.09806 11.7518 7.99935 11.7518C7.90064 11.7518 7.8029 11.7323 7.71173 11.6945C7.62057 11.6566 7.53778 11.6011 7.4681 11.5312L2.4681 6.53122C2.3272 6.39033 2.24805 6.19923 2.24805 5.99997C2.24805 5.80072 2.3272 5.60962 2.4681 5.46872C2.60899 5.32783 2.80009 5.24867 2.99935 5.24867C3.19861 5.24867 3.3897 5.32783 3.5306 5.46872L7.99997 9.9381L12.4693 5.4681C12.6102 5.3272 12.8013 5.24805 13.0006 5.24805C13.1999 5.24805 13.391 5.3272 13.5318 5.4681C13.6727 5.60899 13.7519 5.80009 13.7519 5.99935C13.7519 6.19861 13.6727 6.3897 13.5318 6.5306L13.5306 6.53122Z" fill="#8B95A5"/>
-                </svg>
-              </div>
+              <label className="form-label">Pasillo *</label>
+              <select 
+                className="form-select"
+                value={formData.pasillo}
+                onChange={(e) => setFormData({...formData, pasillo: e.target.value})}
+              >
+                <option value="">Seleccionar pasillo</option>
+                {PASILLOS_OPTIONS.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+              {formErrors.pasillo && <span className="error-text">{formErrors.pasillo}</span>}
             </div>
 
             <div className="form-group">
-              <label className="form-label">Lado</label>
-              <div className="form-input-select">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16.6922 14.1925L14.1922 16.6925C14.0749 16.8098 13.9159 16.8757 13.75 16.8757C13.5842 16.8757 13.4251 16.8098 13.3078 16.6925C13.1905 16.5753 13.1247 16.4162 13.1247 16.2503C13.1247 16.0845 13.1905 15.9254 13.3078 15.8082L14.7414 14.3753H3.75C3.58424 14.3753 3.42527 14.3095 3.30806 14.1923C3.19085 14.0751 3.125 13.9161 3.125 13.7503C3.125 13.5846 3.19085 13.4256 3.30806 13.3084C3.42527 13.1912 3.58424 13.1253 3.75 13.1253H14.7414L13.3078 11.6925C13.1905 11.5753 13.1247 11.4162 13.1247 11.2503C13.1247 11.0845 13.1905 10.9254 13.3078 10.8082C13.4251 10.6909 13.5842 10.625 13.75 10.625C13.9159 10.625 14.0749 10.6909 14.1922 10.8082L16.6922 13.3082C16.7503 13.3662 16.7964 13.4351 16.8279 13.511C16.8593 13.5869 16.8755 13.6682 16.8755 13.7503C16.8755 13.8325 16.8593 13.9138 16.8279 13.9897C16.7964 14.0656 16.7503 14.1345 16.6922 14.1925ZM5.80782 9.19254C5.92509 9.30981 6.08415 9.3757 6.25 9.3757C6.41586 9.37569 6.57492 9.30981 6.69219 9.19254C6.80947 9.07526 6.87535 8.9162 6.87535 8.75035C6.87535 8.5845 6.80947 8.42544 6.69219 8.30816L5.2586 6.87535H16.25C16.4158 6.87535 16.5747 6.8095 16.6919 6.69229C16.8092 6.57508 16.875 6.41611 16.875 6.25035C16.875 6.08459 16.8092 5.92562 16.6919 5.80841C16.5747 5.6912 16.4158 5.62535 16.25 5.62535H5.2586L6.69219 4.19253C6.80947 4.07526 6.87535 3.9162 6.87535 3.75035C6.87535 3.5845 6.80947 3.42544 6.69219 3.30816C6.57492 3.19088 6.41586 3.125 6.25 3.125C6.08415 3.125 5.92509 3.19088 5.80782 3.30816L3.30782 5.80816C3.24971 5.86621 3.20361 5.93514 3.17215 6.01101C3.1407 6.08688 3.12451 6.16821 3.12451 6.25035C3.12451 6.33248 3.1407 6.41381 3.17215 6.48969C3.20361 6.56556 3.24971 6.63449 3.30782 6.69254L5.80782 9.19254Z" fill="#667EEA"/>
-                </svg>
-                <span className="input-text">Izquierdo</span>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M13.5306 6.53122L8.5306 11.5312C8.46092 11.6011 8.37813 11.6566 8.28696 11.6945C8.1958 11.7323 8.09806 11.7518 7.99935 11.7518C7.90064 11.7518 7.8029 11.7323 7.71173 11.6945C7.62057 11.6566 7.53778 11.6011 7.4681 11.5312L2.4681 6.53122C2.3272 6.39033 2.24805 6.19923 2.24805 5.99997C2.24805 5.80072 2.3272 5.60962 2.4681 5.46872C2.60899 5.32783 2.80009 5.24867 2.99935 5.24867C3.19861 5.24867 3.3897 5.32783 3.5306 5.46872L7.99997 9.9381L12.4693 5.4681C12.6102 5.3272 12.8013 5.24805 13.0006 5.24805C13.1999 5.24805 13.391 5.3272 13.5318 5.4681C13.6727 5.60899 13.7519 5.80009 13.7519 5.99935C13.7519 6.19861 13.6727 6.3897 13.5318 6.5306L13.5306 6.53122Z" fill="#8B95A5"/>
-                </svg>
-              </div>
+              <label className="form-label">Lado *</label>
+              <select 
+                className="form-select"
+                value={formData.lado}
+                onChange={(e) => setFormData({...formData, lado: e.target.value})}
+              >
+                {LADOS_OPTIONS.map(l => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </select>
+              {formErrors.lado && <span className="error-text">{formErrors.lado}</span>}
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Ubicación</label>
-              <div className="form-input">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 1.25C8.17727 1.25207 6.42979 1.97706 5.14092 3.26592C3.85206 4.55479 3.12707 6.30227 3.125 8.125C3.125 14.0078 9.375 18.4508 9.64141 18.6367C9.74649 18.7103 9.87169 18.7498 10 18.7498C10.1283 18.7498 10.2535 18.7103 10.3586 18.6367C10.625 18.4508 16.875 14.0078 16.875 8.125C16.8729 6.30227 16.1479 4.55479 14.8591 3.26592C13.5702 1.97706 11.8227 1.25207 10 1.25ZM10 5.625C10.4945 5.625 10.9778 5.77162 11.3889 6.04633C11.8 6.32103 12.1205 6.71148 12.3097 7.16829C12.4989 7.62511 12.5484 8.12777 12.452 8.61273C12.3555 9.09768 12.1174 9.54314 11.7678 9.89277C11.4181 10.2424 10.9727 10.4805 10.4877 10.577C10.0028 10.6734 9.50011 10.6239 9.04329 10.4347C8.58648 10.2455 8.19603 9.92505 7.92133 9.51393C7.64662 9.1028 7.5 8.61945 7.5 8.125C7.5 7.46196 7.76339 6.82607 8.23223 6.35723C8.70107 5.88839 9.33696 5.625 10 5.625Z" fill="#667EEA"/>
-                </svg>
-                <span className="input-text">B3-15</span>
-              </div>
+              <label className="form-label">Ubicación *</label>
+              <input 
+                type="text"
+                className="form-input-field"
+                placeholder="Ej: 12, 15, 20"
+                value={formData.ubicacion}
+                onChange={(e) => setFormData({...formData, ubicacion: e.target.value})}
+              />
+              {formErrors.ubicacion && <span className="error-text">{formErrors.ubicacion}</span>}
             </div>
 
             <div className="form-group">
-              <label className="form-label">Altura</label>
-              <div className="form-input-select">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9.19205 13.3083C9.25016 13.3663 9.29626 13.4353 9.32771 13.5112C9.35916 13.587 9.37535 13.6684 9.37535 13.7505C9.37535 13.8326 9.35916 13.914 9.32771 13.9898C9.29626 14.0657 9.25016 14.1346 9.19205 14.1927L6.69205 16.6927C6.634 16.7508 6.56507 16.7969 6.4892 16.8283C6.41332 16.8598 6.33199 16.876 6.24986 16.876C6.16772 16.876 6.0864 16.8598 6.01052 16.8283C5.93465 16.7969 5.86572 16.7508 5.80767 16.6927L3.30767 14.1927C3.2496 14.1346 3.20354 14.0657 3.17211 13.9898C3.14069 13.9139 3.12451 13.8326 3.12451 13.7505C3.12451 13.6684 3.14069 13.5871 3.17211 13.5112C3.20354 13.4353 3.2496 13.3664 3.30767 13.3083C3.42495 13.191 3.58401 13.1251 3.74986 13.1251C3.83198 13.1251 3.9133 13.1413 3.98917 13.1727C4.06504 13.2042 4.13398 13.2502 4.19205 13.3083L5.62486 14.7419V3.75049C5.62486 3.58473 5.69071 3.42576 5.80792 3.30855C5.92513 3.19134 6.0841 3.12549 6.24986 3.12549C6.41562 3.12549 6.57459 3.19134 6.6918 3.30855C6.80901 3.42576 6.87486 3.58473 6.87486 3.75049V14.7419L8.30767 13.3083C8.36572 13.2502 8.43465 13.2041 8.51052 13.1726C8.5864 13.1412 8.66772 13.125 8.74986 13.125C8.83199 13.125 8.91332 13.1412 8.9892 13.1726C9.06507 13.2041 9.134 13.2502 9.19205 13.3083ZM16.692 5.8083L14.192 3.3083C14.134 3.25019 14.0651 3.20409 13.9892 3.17264C13.9133 3.14119 13.832 3.125 13.7499 3.125C13.6677 3.125 13.5864 3.14119 13.5105 3.17264C13.4346 3.20409 13.3657 3.25019 13.3077 3.3083L10.8077 5.8083C10.6904 5.92558 10.6245 6.08464 10.6245 6.25049C10.6245 6.41634 10.6904 6.5754 10.8077 6.69268C10.9249 6.80995 11.084 6.87584 11.2499 6.87584C11.4157 6.87584 11.5748 6.80995 11.692 6.69268L13.1249 5.25909V16.2505C13.1249 16.4163 13.1907 16.5752 13.3079 16.6924C13.4251 16.8096 13.5841 16.8755 13.7499 16.8755C13.9156 16.8755 14.0746 16.8096 14.1918 16.6924C14.309 16.5752 14.3749 16.4163 14.3749 16.2505V5.25909L15.8077 6.69268C15.9249 6.80995 16.084 6.87584 16.2499 6.87584C16.4157 6.87584 16.5748 6.80995 16.692 6.69268C16.8093 6.5754 16.8752 6.41634 16.8752 6.25049C16.8752 6.08464 16.8093 5.92558 16.692 5.8083Z" fill="#667EEA"/>
-                </svg>
-                <span className="input-text">Nivel 2</span>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M13.5306 6.53122L8.5306 11.5312C8.46092 11.6011 8.37813 11.6566 8.28696 11.6945C8.1958 11.7323 8.09806 11.7518 7.99935 11.7518C7.90064 11.7518 7.8029 11.7323 7.71173 11.6945C7.62057 11.6566 7.53778 11.6011 7.4681 11.5312L2.4681 6.53122C2.3272 6.39033 2.24805 6.19923 2.24805 5.99997C2.24805 5.80072 2.3272 5.60962 2.4681 5.46872C2.60899 5.32783 2.80009 5.24867 2.99935 5.24867C3.19861 5.24867 3.3897 5.32783 3.5306 5.46872L7.99997 9.9381L12.4693 5.4681C12.6102 5.3272 12.8013 5.24805 13.0006 5.24805C13.1999 5.24805 13.391 5.3272 13.5318 5.4681C13.6727 5.60899 13.7519 5.80009 13.7519 5.99935C13.7519 6.19861 13.6727 6.3897 13.5318 6.5306L13.5306 6.53122Z" fill="#8B95A5"/>
-                </svg>
-              </div>
+              <label className="form-label">Altura *</label>
+              <select 
+                className="form-select"
+                value={formData.altura}
+                onChange={(e) => setFormData({...formData, altura: e.target.value})}
+              >
+                {ALTURAS_OPTIONS.map(a => (
+                  <option key={a} value={`Nivel ${a}`}>Nivel {a}</option>
+                ))}
+              </select>
+              {formErrors.altura && <span className="error-text">{formErrors.altura}</span>}
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-group full-width">
               <label className="form-label">Stock Mínimo por Ubicación</label>
-              <div className="form-input">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M17.475 5.16841L10.6 1.40669C10.4163 1.30519 10.2099 1.25195 10 1.25195C9.79013 1.25195 9.58369 1.30519 9.4 1.40669L2.525 5.16997C2.32866 5.2774 2.16477 5.43557 2.05043 5.62796C1.93609 5.82035 1.87551 6.03992 1.875 6.26372V13.7356C1.87551 13.9594 1.93609 14.179 2.05043 14.3714C2.16477 14.5638 2.32866 14.7219 2.525 14.8293L9.4 18.5926C9.58369 18.6941 9.79013 18.7474 10 18.7474C10.2099 18.7474 10.4163 18.6941 10.6 18.5926L17.475 14.8293C17.6713 14.7219 17.8352 14.5638 17.9496 14.3714C18.0639 14.179 18.1245 13.9594 18.125 13.7356V6.2645C18.1249 6.0403 18.0645 5.82025 17.9502 5.62741C17.8358 5.43456 17.6717 5.27603 17.475 5.16841ZM10 2.50044L16.2766 5.93794L13.9508 7.21138L7.67344 3.77388L10 2.50044ZM10 9.37544L3.72344 5.93794L6.37187 4.48794L12.6484 7.92544L10 9.37544ZM3.125 7.03169L9.375 10.452V17.1543L3.125 13.7364V7.03169ZM16.875 13.7333L10.625 17.1543V10.4551L13.125 9.08716V11.8754C13.125 12.0412 13.1908 12.2002 13.3081 12.3174C13.4253 12.4346 13.5842 12.5004 13.75 12.5004C13.9158 12.5004 14.0747 12.4346 14.1919 12.3174C14.3092 12.2002 14.375 12.0412 14.375 11.8754V8.40279L16.875 7.03169V13.7325V13.7333Z" fill="#667EEA"/>
-                </svg>
-                <span className="input-text">25 unidades</span>
-              </div>
+              <input 
+                type="number"
+                className="form-input-field"
+                placeholder="Ingrese stock mínimo"
+                value={formData.stockMinimo}
+                onChange={(e) => setFormData({...formData, stockMinimo: e.target.value})}
+                min="0"
+              />
+              {formErrors.stockMinimo && <span className="error-text">{formErrors.stockMinimo}</span>}
             </div>
           </div>
 
@@ -236,7 +382,11 @@ function PickingRoute({ onBack, product }) {
           </div>
 
           <div className="add-location-wrapper">
-            <button className="add-location-button">
+            <button 
+              className="add-location-button"
+              onClick={handleAddLocation}
+              disabled={isLoading}
+            >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M16.0312 9C16.0312 9.22378 15.9424 9.43839 15.7841 9.59662C15.6259 9.75485 15.4113 9.84375 15.1875 9.84375H9.84375V15.1875C9.84375 15.4113 9.75485 15.6259 9.59662 15.7841C9.43839 15.9424 9.22378 16.0312 9 16.0312C8.77622 16.0312 8.56161 15.9424 8.40338 15.7841C8.24514 15.6259 8.15625 15.4113 8.15625 15.1875V9.84375H2.8125C2.58872 9.84375 2.37411 9.75485 2.21588 9.59662C2.05764 9.43839 1.96875 9.22378 1.96875 9C1.96875 8.77622 2.05764 8.56161 2.21588 8.40338C2.37411 8.24514 2.58872 8.15625 2.8125 8.15625H8.15625V2.8125C8.15625 2.58872 8.24514 2.37411 8.40338 2.21588C8.56161 2.05764 8.77622 1.96875 9 1.96875C9.22378 1.96875 9.43839 2.05764 9.59662 2.21588C9.75485 2.37411 9.84375 2.58872 9.84375 2.8125V8.15625H15.1875C15.4113 8.15625 15.6259 8.24514 15.7841 8.40338C15.9424 8.56161 16.0312 8.77622 16.0312 9Z" fill="white"/>
               </svg>
@@ -251,10 +401,22 @@ function PickingRoute({ onBack, product }) {
             <div className="header-with-badge">
               <h2 className="card-heading">Ubicaciones del Producto</h2>
               <div className="count-badge">
-                <span>{locations.length} ubicaciones</span>
+                <span>{totalLocations || locations.length} ubicaciones</span>
               </div>
             </div>
           </div>
+
+          {isLoading ? (
+            <div className="loading-state">
+              <div className="spinner"></div>
+              <p>Cargando ubicaciones...</p>
+            </div>
+          ) : locations.length === 0 ? (
+            <div className="empty-state">
+              <p>No hay ubicaciones registradas para este producto</p>
+              <span>Añade la primera ubicación usando el formulario anterior</span>
+            </div>
+          ) : (
 
           <div className="locations-table">
             <div className="table-header">
@@ -312,12 +474,20 @@ function PickingRoute({ onBack, product }) {
 
                   <div className="table-cell actions-cell">
                     <div className="action-buttons">
-                      <button className="edit-btn">
+                      <button 
+                        className="edit-btn"
+                        onClick={() => handleEditClick(location)}
+                        disabled={isLoading}
+                      >
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M14.2069 4.5861L11.4144 1.79297C11.3215 1.70009 11.2113 1.62641 11.0899 1.57614C10.9686 1.52587 10.8385 1.5 10.7072 1.5C10.5759 1.5 10.4458 1.52587 10.3245 1.57614C10.2031 1.62641 10.0929 1.70009 10 1.79297L2.29313 9.50047C2.19987 9.593 2.12593 9.70313 2.0756 9.82448C2.02528 9.94584 1.99959 10.076 2.00001 10.2073V13.0005C2.00001 13.2657 2.10536 13.52 2.2929 13.7076C2.48043 13.8951 2.73479 14.0005 3.00001 14.0005H5.79313C5.9245 14.0009 6.05464 13.9752 6.17599 13.9249C6.29735 13.8746 6.40748 13.8006 6.50001 13.7073L14.2069 6.00047C14.2998 5.90761 14.3734 5.79736 14.4237 5.67602C14.474 5.55468 14.4999 5.42463 14.4999 5.29329C14.4999 5.16195 14.474 5.03189 14.4237 4.91055C14.3734 4.78921 14.2998 4.67896 14.2069 4.5861ZM3.20688 10.0005L8.50001 4.70735L9.54313 5.75047L4.25001 11.043L3.20688 10.0005ZM3.00001 11.2073L4.79313 13.0005H3.00001V11.2073ZM6.00001 12.7936L4.95688 11.7505L10.25 6.45735L11.2931 7.50047L6.00001 12.7936ZM12 6.7936L9.20688 4.00047L10.7069 2.50047L13.5 5.29297L12 6.7936Z" fill="#4A5568"/>
                         </svg>
                       </button>
-                      <button className="delete-btn">
+                      <button 
+                        className="delete-btn"
+                        onClick={() => handleDeleteClick(location)}
+                        disabled={isLoading}
+                      >
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M13.5 3H11V2.5C11 2.10218 10.842 1.72064 10.5607 1.43934C10.2794 1.15804 9.89782 1 9.5 1H6.5C6.10218 1 5.72064 1.15804 5.43934 1.43934C5.15804 1.72064 5 2.10218 5 2.5V3H2.5C2.36739 3 2.24021 3.05268 2.14645 3.14645C2.05268 3.24021 2 3.36739 2 3.5C2 3.63261 2.05268 3.75979 2.14645 3.85355C2.24021 3.94732 2.36739 4 2.5 4H3V13C3 13.2652 3.10536 13.5196 3.29289 13.7071C3.48043 13.8946 3.73478 14 4 14H12C12.2652 14 12.5196 13.8946 12.7071 13.7071C12.8946 13.5196 13 13.2652 13 13V4H13.5C13.6326 4 13.7598 3.94732 13.8536 3.85355C13.9473 3.75979 14 3.63261 14 3.5C14 3.36739 13.9473 3.24021 13.8536 3.14645C13.7598 3.05268 13.6326 3 13.5 3ZM6 2.5C6 2.36739 6.05268 2.24021 6.14645 2.14645C6.24021 2.05268 6.36739 2 6.5 2H9.5C9.63261 2 9.75979 2.05268 9.85355 2.14645C9.94732 2.24021 10 2.36739 10 2.5V3H6V2.5ZM12 13H4V4H12V13ZM7 6.5V10.5C7 10.6326 6.94732 10.7598 6.85355 10.8536C6.75979 10.9473 6.63261 11 6.5 11C6.36739 11 6.24021 10.9473 6.14645 10.8536C6.05268 10.7598 6 10.6326 6 10.5V6.5C6 6.36739 6.05268 6.24021 6.14645 6.14645C6.24021 6.05268 6.36739 6 6.5 6C6.63261 6 6.75979 6.05268 6.85355 6.14645C6.94732 6.24021 7 6.36739 7 6.5ZM10 6.5V10.5C10 10.6326 9.94732 10.7598 9.85355 10.8536C9.75979 10.9473 9.63261 11 9.5 11C9.36739 11 9.24021 10.9473 9.14645 10.8536C9.05268 10.7598 9 10.6326 9 10.5V6.5C9 6.36739 9.05268 6.24021 9.14645 6.14645C9.24021 6.05268 9.36739 6 9.5 6C9.63261 6 9.75979 6.05268 9.85355 6.14645C9.94732 6.24021 10 6.36739 10 6.5Z" fill="#E74C3C"/>
                         </svg>
@@ -328,8 +498,86 @@ function PickingRoute({ onBack, product }) {
               ))}
             </div>
           </div>
+          )}
         </div>
       </div>
+
+      {/* Modal de Edición */}
+      {showEditModal && editingLocation && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Editar Ubicación</h3>
+              <button className="modal-close" onClick={() => setShowEditModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Pasillo</label>
+                <select 
+                  className="form-select"
+                  value={editingLocation.pasillo}
+                  onChange={(e) => setEditingLocation({...editingLocation, pasillo: e.target.value})}
+                >
+                  {PASILLOS_OPTIONS.map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Lado</label>
+                <select 
+                  className="form-select"
+                  value={editingLocation.lado}
+                  onChange={(e) => setEditingLocation({...editingLocation, lado: e.target.value})}
+                >
+                  {LADOS_OPTIONS.map(l => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Ubicación</label>
+                <input 
+                  type="text"
+                  className="form-input-field"
+                  value={editingLocation.ubicacion}
+                  onChange={(e) => setEditingLocation({...editingLocation, ubicacion: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Altura</label>
+                <select 
+                  className="form-select"
+                  value={editingLocation.altura}
+                  onChange={(e) => setEditingLocation({...editingLocation, altura: e.target.value})}
+                >
+                  {ALTURAS_OPTIONS.map(a => (
+                    <option key={a} value={`Nivel ${a}`}>Nivel {a}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Stock Mínimo</label>
+                <input 
+                  type="number"
+                  className="form-input-field"
+                  value={editingLocation.stockMinimo}
+                  onChange={(e) => setEditingLocation({...editingLocation, stockMinimo: e.target.value})}
+                  min="0"
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="modal-btn-cancel" onClick={() => setShowEditModal(false)}>
+                Cancelar
+              </button>
+              <button className="modal-btn-save" onClick={handleSaveEdit} disabled={isLoading}>
+                {isLoading ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

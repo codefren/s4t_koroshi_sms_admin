@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import './Products.css'
+import './Almacen.css'
 import PickingRoute from './PickingRoute'
 import { productService } from './services/productService'
 import { 
@@ -9,12 +9,12 @@ import {
   calculateProductStats
 } from './utils/productTransform'
 
-function Products({ onBack }) {
+function Almacen({ onBack }) {
   const [showPickingRoute, setShowPickingRoute] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
 
   // Estados principales
-  const [products, setProducts] = useState([])
+  const [products, setAlmacen] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   
@@ -40,7 +40,7 @@ function Products({ onBack }) {
   })
 
   // Función para cargar productos desde la API
-  const fetchProducts = async () => {
+  const fetchAlmacen = async () => {
     try {
       setLoading(true)
       setError(null)
@@ -50,12 +50,12 @@ function Products({ onBack }) {
         search: searchTerm,
         page: pagination.page,
         perPage: pagination.perPage,
-        almacen_id: 2
+        almacen_id: 1
       })
       
       // Transformar datos para la UI
-      const transformedProducts = transformProductListData(data.products || [])
-      setProducts(transformedProducts)
+      const transformedAlmacen = transformProductListData(data.products || [])
+      setAlmacen(transformedAlmacen)
       
       // Actualizar paginación
       setPagination({
@@ -66,7 +66,7 @@ function Products({ onBack }) {
       })
       
       // Calcular estadísticas
-      const productStats = calculateProductStats(transformedProducts)
+      const productStats = calculateProductStats(transformedAlmacen)
       setStats(productStats)
       
     } catch (err) {
@@ -79,7 +79,7 @@ function Products({ onBack }) {
   
   // useEffect para cargar productos al montar y cuando cambien los filtros
   useEffect(() => {
-    fetchProducts()
+    fetchAlmacen()
   }, [activeFilter, searchTerm, pagination.page])
   
   // Handler para cambiar filtro
@@ -114,12 +114,12 @@ function Products({ onBack }) {
   }
 
   return (
-    <div className="products-container">
+    <div className="almacen-container">
       {/* Header */}
-      <header className="products-header">
+      <header className="almacen-header">
         <div className="header-left">
           <div className="header-info">
-            <h1 className="page-title">Productos y Ubicaciones</h1>
+            <h1 className="page-title">Almacén</h1>
           </div>
         </div>
 
@@ -146,9 +146,9 @@ function Products({ onBack }) {
       </header>
 
       {/* Content */}
-      <div className="products-content">
+      <div className="almacen-content">
         {/* Toolbar */}
-        <div className="products-toolbar">
+        <div className="almacen-toolbar">
           <div className="toolbar-left">
             <button 
               className={`filter-button ${activeFilter === 'all' ? 'active' : ''}`}
@@ -204,7 +204,7 @@ function Products({ onBack }) {
               <span>Exportar</span>
             </button>
 
-            <button className="new-product-button">
+            <button className="new-almacen-button">
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M16.0312 9C16.0312 9.22378 15.9424 9.43839 15.7841 9.59662C15.6259 9.75485 15.4113 9.84375 15.1875 9.84375H9.84375V15.1875C9.84375 15.4113 9.75485 15.6259 9.59662 15.7841C9.43839 15.9424 9.22378 16.0312 9 16.0312C8.77622 16.0312 8.56161 15.9424 8.40338 15.7841C8.24514 15.6259 8.15625 15.4113 8.15625 15.1875V9.84375H2.8125C2.58872 9.84375 2.37411 9.75485 2.21588 9.59662C2.05764 9.43839 1.96875 9.22378 1.96875 9C1.96875 8.77622 2.05764 8.56161 2.21588 8.40338C2.37411 8.24514 2.58872 8.15625 2.8125 8.15625H8.15625V2.8125C8.15625 2.58872 8.24514 2.37411 8.40338 2.21588C8.56161 2.05764 8.77622 1.96875 9 1.96875C9.22378 1.96875 9.43839 2.05764 9.59662 2.21588C9.75485 2.37411 9.84375 2.58872 9.84375 2.8125V8.15625H15.1875C15.4113 8.15625 15.6259 8.24514 15.7841 8.40338C15.9424 8.56161 16.0312 8.77622 16.0312 9Z" fill="white"/>
               </svg>
@@ -213,9 +213,9 @@ function Products({ onBack }) {
           </div>
         </div>
 
-        {/* Products Table */}
-        <div className="products-table">
-          <div className="products-table-header">
+        {/* Almacen Table */}
+        <div className="almacen-table">
+          <div className="almacen-table-header">
             <div>PRODUCTO</div>
             <div>SKU</div>
             <div>TALLA</div>
@@ -225,7 +225,7 @@ function Products({ onBack }) {
             <div>ACCIONES</div>
           </div>
 
-          <div className="products-table-body">
+          <div className="almacen-table-body">
             {/* Estado de loading */}
             {loading && (
               <div style={{ 
@@ -258,7 +258,7 @@ function Products({ onBack }) {
                 <div style={{ marginBottom: '0.5rem', fontWeight: '600' }}>Error al cargar productos</div>
                 <div style={{ color: '#64748B' }}>{error}</div>
                 <button 
-                  onClick={fetchProducts}
+                  onClick={fetchAlmacen}
                   style={{
                     marginTop: '1rem',
                     padding: '0.5rem 1rem',
@@ -289,30 +289,30 @@ function Products({ onBack }) {
             
             {/* Lista de productos */}
             {!loading && !error && products.map((product) => (
-              <div key={product.id} className="product-row">
-                <div className="product-cell-product">
-                  <div className="product-image-box">
+              <div key={product.id} className="almacen-row">
+                <div className="almacen-cell-product">
+                  <div className="almacen-image-box">
                     <img 
                       src={product.image || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Crect width='80' height='80' fill='%23F1F5F9'/%3E%3Cpath d='M40 25c-8.284 0-15 6.716-15 15s6.716 15 15 15 15-6.716 15-15-6.716-15-15-15zm0 25c-5.514 0-10-4.486-10-10s4.486-10 10-10 10 4.486 10 10-4.486 10-10 10z' fill='%2394A3B8'/%3E%3Ccircle cx='40' cy='40' r='3' fill='%2394A3B8'/%3E%3Cpath d='M52 32l-3-3-9 9-4-4-3 3 7 7z' fill='%2394A3B8'/%3E%3C/svg%3E"} 
                       alt={product.name} 
-                      className="product-image" 
+                      className="almacen-image" 
                     />
                   </div>
-                  <div className="product-details">
-                    <div className="product-name">{product.name}</div>
-                    <div className="product-category">{product.category}</div>
+                  <div className="almacen-details">
+                    <div className="almacen-name">{product.name}</div>
+                    <div className="almacen-category">{product.category}</div>
                   </div>
                 </div>
 
-                <div className="product-cell-sku">
-                  <div className="product-sku">{product.sku}</div>
+                <div className="almacen-cell-sku">
+                  <div className="almacen-sku">{product.sku}</div>
                 </div>
 
-                <div className="product-cell-sku">
-                  <div className="product-sku">{product.talla}</div>
+                <div className="almacen-cell-sku">
+                  <div className="almacen-sku">{product.talla}</div>
                 </div>
 
-                <div className="product-cell-locations">
+                <div className="almacen-cell-locations">
                   {product.locations.map((location, index) => (
                     <div key={index} className={`location-item ${location.isMore ? 'location-more' : ''}`}>
                       {!location.isMore && (
@@ -325,7 +325,7 @@ function Products({ onBack }) {
                   ))}
                 </div>
 
-                <div className="product-cell-stock">
+                <div className="almacen-cell-stock">
                   <div className="stock-number">{product.stock}</div>
                   <div className="stock-label">unidades</div>
                   <div className="stock-bar">
@@ -339,14 +339,14 @@ function Products({ onBack }) {
                   </div>
                 </div>
 
-                <div className="product-cell-status">
-                  <div className={`product-status-badge ${product.statusClass}`}>
+                <div className="almacen-cell-status">
+                  <div className={`almacen-status-badge ${product.statusClass}`}>
                     {product.status}
                   </div>
                 </div>
 
-                <div className="product-cell-actions">
-                  <button className="product-action-button view" onClick={() => handleViewProduct(product)}>
+                <div className="almacen-cell-actions">
+                  <button className="almacen-action-button view" onClick={() => handleViewProduct(product)}>
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <g clipPath="url(#clip0_326_120)">
                         <path d="M17.6484 8.65758C17.6224 8.60062 17.0065 7.23305 15.6459 5.8725C13.8255 4.05492 11.5312 3.09375 8.99997 3.09375C6.46872 3.09375 4.17442 4.05492 2.35614 5.8725C0.995596 7.23305 0.379658 8.60062 0.351533 8.65758C0.303899 8.76558 0.279297 8.88232 0.279297 9.00035C0.279297 9.11839 0.303899 9.23513 0.351533 9.34313C0.377549 9.40078 0.993487 10.7677 2.35474 12.1282C4.17442 13.9458 6.46872 14.9062 8.99997 14.9062C11.5312 14.9062 13.8255 13.9458 15.6431 12.1282C17.0043 10.7677 17.6203 9.40078 17.6463 9.34313C17.6943 9.23527 17.7192 9.11861 17.7196 9.00057C17.72 8.88254 17.6957 8.76572 17.6484 8.65758ZM14.4098 10.9779C12.9002 12.4643 11.0805 13.2188 8.99997 13.2188C6.91942 13.2188 5.09974 12.4643 3.59224 10.9772C2.99904 10.3902 2.48878 9.72503 2.0756 9C2.4889 8.27526 2.99915 7.6103 3.59224 7.02352C5.10044 5.5357 6.91942 4.78125 8.99997 4.78125C11.0805 4.78125 12.8995 5.5357 14.4077 7.02352C15.0008 7.61025 15.5111 8.27522 15.9243 9C15.5111 9.72499 15.0008 10.3902 14.4077 10.9772L14.4098 10.9779ZM8.99997 5.90625C8.38809 5.90625 7.78994 6.0877 7.28118 6.42764C6.77241 6.76759 6.37588 7.25076 6.14172 7.81607C5.90756 8.38138 5.84629 9.00343 5.96567 9.60356C6.08504 10.2037 6.37969 10.7549 6.81236 11.1876C7.24503 11.6203 7.79628 11.9149 8.39641 12.0343C8.99654 12.1537 9.61859 12.0924 10.1839 11.8583C10.7492 11.6241 11.2324 11.2276 11.5723 10.7188C11.9123 10.21 12.0937 9.61189 12.0937 9C12.0928 8.17977 11.7665 7.39341 11.1866 6.81342C10.6066 6.23343 9.8202 5.90718 8.99997 5.90625ZM8.99997 10.4062C8.72184 10.4062 8.44996 10.3238 8.2187 10.1693C7.98744 10.0147 7.8072 9.79511 7.70077 9.53815C7.59433 9.28119 7.56648 8.99844 7.62074 8.72565C7.675 8.45287 7.80893 8.2023 8.0056 8.00563C8.20227 7.80896 8.45284 7.67503 8.72563 7.62077C8.99841 7.56651 9.28116 7.59436 9.53812 7.70079C9.79508 7.80723 10.0147 7.98747 10.1692 8.21873C10.3237 8.44999 10.4062 8.72187 10.4062 9C10.4062 9.37296 10.2581 9.73065 9.99434 9.99437C9.73062 10.2581 9.37293 10.4062 8.99997 10.4062Z" fill="white"/>
@@ -359,13 +359,13 @@ function Products({ onBack }) {
                     </svg>
                   </button>
 
-                  <button className="product-action-button edit">
+                  <button className="almacen-action-button edit">
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M15.9827 5.15936L12.8412 2.0171C12.7367 1.9126 12.6127 1.82971 12.4762 1.77316C12.3397 1.71661 12.1934 1.6875 12.0456 1.6875C11.8978 1.6875 11.7515 1.71661 11.615 1.77316C11.4785 1.82971 11.3545 1.9126 11.25 2.0171L2.57977 10.688C2.47485 10.7921 2.39167 10.916 2.33506 11.0525C2.27844 11.1891 2.24953 11.3355 2.25001 11.4833V14.6255C2.25001 14.9239 2.36853 15.21 2.57951 15.421C2.79049 15.632 3.07664 15.7505 3.37501 15.7505H6.51727C6.66506 15.751 6.81147 15.7221 6.94799 15.6655C7.08451 15.6089 7.20842 15.5257 7.31251 15.4208L15.9827 6.75053C16.0872 6.64606 16.1701 6.52203 16.2267 6.38553C16.2832 6.24902 16.3123 6.10271 16.3123 5.95495C16.3123 5.80719 16.2832 5.66088 16.2267 5.52437C16.1701 5.38786 16.0872 5.26383 15.9827 5.15936ZM3.60774 11.2505L9.56251 5.29577L10.736 6.46928L4.78126 12.4233L3.60774 11.2505ZM3.37501 12.6083L5.39227 14.6255H3.37501V12.6083ZM6.75001 14.3928L5.57649 13.2193L11.5313 7.26452L12.7048 8.43803L6.75001 14.3928ZM13.5 7.6428L10.3577 4.50053L12.0452 2.81303L15.1875 5.9546L13.5 7.6428Z" fill="#4A5568"/>
                     </svg>
                   </button>
 
-                  <button className="product-action-button more">
+                  <button className="almacen-action-button more">
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M7.875 4.21875C7.875 3.99625 7.94098 3.77874 8.0646 3.59373C8.18821 3.40873 8.36392 3.26453 8.56948 3.17939C8.77505 3.09424 9.00125 3.07196 9.21948 3.11537C9.43771 3.15878 9.63816 3.26592 9.7955 3.42326C9.95283 3.58059 10.06 3.78105 10.1034 3.99927C10.1468 4.2175 10.1245 4.4437 10.0394 4.64927C9.95422 4.85484 9.81002 5.03054 9.62502 5.15415C9.44001 5.27777 9.2225 5.34375 9 5.34375C8.70163 5.34375 8.41548 5.22522 8.20451 5.01425C7.99353 4.80327 7.875 4.51712 7.875 4.21875ZM9 7.875C8.7775 7.875 8.55999 7.94098 8.37498 8.0646C8.18998 8.18821 8.04578 8.36391 7.96064 8.56948C7.87549 8.77505 7.85321 9.00125 7.89662 9.21948C7.94003 9.43771 8.04717 9.63816 8.20451 9.7955C8.36184 9.95283 8.5623 10.06 8.78052 10.1034C8.99875 10.1468 9.22495 10.1245 9.43052 10.0394C9.63609 9.95422 9.81179 9.81002 9.9354 9.62502C10.059 9.44001 10.125 9.2225 10.125 9C10.125 8.70163 10.0065 8.41548 9.7955 8.20451C9.58452 7.99353 9.29837 7.875 9 7.875ZM9 12.6563C8.7775 12.6563 8.55999 12.7222 8.37498 12.8458C8.18998 12.9695 8.04578 13.1452 7.96064 13.3507C7.87549 13.5563 7.85321 13.7825 7.89662 14.0007C7.94003 14.219 8.04717 14.4194 8.20451 14.5767C8.36184 14.7341 8.5623 14.8412 8.78052 14.8846C8.99875 14.928 9.22495 14.9058 9.43052 14.8206C9.63609 14.7355 9.81179 14.5913 9.9354 14.4063C10.059 14.2213 10.125 14.0038 10.125 13.7813C10.125 13.4829 10.0065 13.1967 9.7955 12.9858C9.58452 12.7748 9.29837 12.6563 9 12.6563Z" fill="#4A5568"/>
                     </svg>
@@ -376,7 +376,7 @@ function Products({ onBack }) {
           </div>
 
           {/* Pagination */}
-          <div className="products-pagination">
+          <div className="almacen-pagination">
             <div className="pagination-info">
               Mostrando 1-5 de 247 productos
             </div>
@@ -404,4 +404,4 @@ function Products({ onBack }) {
   )
 }
 
-export default Products
+export default Almacen

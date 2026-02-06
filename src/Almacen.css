@@ -1,5 +1,5 @@
 /* Products Container */
-.products-container {
+.almacen-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -7,7 +7,7 @@
 }
 
 /* Products Header */
-.products-header {
+.almacen-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -47,7 +47,7 @@
 }
 
 /* Products Content */
-.products-content {
+.almacen-content {
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -55,7 +55,7 @@
 }
 
 /* Products Toolbar */
-.products-toolbar {
+.almacen-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -176,7 +176,7 @@
 }
 
 /* Products Table */
-.products-table {
+.almacen-table {
   display: flex;
   flex-direction: column;
   border-radius: 16px;
@@ -185,7 +185,7 @@
   overflow: hidden;
 }
 
-.products-table-header {
+.almacen-table-header {
   display: grid;
   grid-template-columns: 2fr 1fr 0.8fr 1.5fr 1fr 0.8fr 1fr;
   gap: 16px;
@@ -196,13 +196,13 @@
   color: #6C757D;
 }
 
-.products-table-body {
+.almacen-table-body {
   display: flex;
   flex-direction: column;
 }
 
 /* Product Row */
-.product-row {
+.almacen-row {
   display: grid;
   grid-template-columns: 2fr 1fr 0.8fr 1.5fr 1fr 0.8fr 1fr;
   gap: 16px;
@@ -212,18 +212,18 @@
   transition: background 0.3s ease;
 }
 
-.product-row:hover {
+.almacen-row:hover {
   background: #F8FAFC;
 }
 
 /* Product Cells */
-.product-cell-product {
+.almacen-cell-product {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.product-image-box {
+.almacen-image-box {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -235,45 +235,45 @@
   overflow: hidden;
 }
 
-.product-image {
+.almacen-image {
   width: 60px;
   height: 60px;
   object-fit: cover;
   border-radius: 10px;
 }
 
-.product-details {
+.almacen-details {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.product-name {
+.almacen-name {
   font-size: 15px;
   font-weight: 500;
   color: #1A1F36;
 }
 
-.product-category {
+.almacen-category {
   font-size: 12px;
   font-weight: 400;
   color: #8B95A5;
 }
 
-.product-cell-sku {
+.almacen-cell-sku {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.product-sku {
+.almacen-sku {
   font-size: 14px;
   font-weight: 500;
   color: #4A5568;
 }
 
 /* Locations */
-.product-cell-locations {
+.almacen-cell-locations {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -304,7 +304,7 @@
 }
 
 /* Stock */
-.product-cell-stock {
+.almacen-cell-stock {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -337,11 +337,11 @@
 }
 
 /* Status Badge */
-.product-cell-status {
+.almacen-cell-status {
   display: flex;
 }
 
-.product-status-badge {
+.almacen-status-badge {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -353,29 +353,29 @@
   width: 100%;
 }
 
-.product-status-badge.active {
+.almacen-status-badge.active {
   background: #D4EDDA;
   color: #155724;
 }
 
-.product-status-badge.low-stock {
+.almacen-status-badge.low-stock {
   background: #FFF3CD;
   color: #856404;
 }
 
-.product-status-badge.out-of-stock {
+.almacen-status-badge.out-of-stock {
   background: #F8D7DA;
   color: #721C24;
 }
 
 /* Action Buttons */
-.product-cell-actions {
+.almacen-cell-actions {
   display: flex;
   gap: 8px;
   justify-content: center;
 }
 
-.product-action-button {
+.almacen-action-button {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -387,35 +387,35 @@
   transition: all 0.3s ease;
 }
 
-.product-action-button:hover {
+.almacen-action-button:hover {
   transform: translateY(-1px);
 }
 
-.product-action-button.view {
+.almacen-action-button.view {
   background: linear-gradient(315deg, #667EEA 64.64%, #764BA2 135.36%);
 }
 
-.product-action-button.view:hover {
+.almacen-action-button.view:hover {
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
-.product-action-button.edit,
-.product-action-button.more {
+.almacen-action-button.edit,
+.almacen-action-button.more {
   background: #F5F7FA;
 }
 
-.product-action-button.edit:hover,
-.product-action-button.more:hover {
+.almacen-action-button.edit:hover,
+.almacen-action-button.more:hover {
   background: #E2E8F0;
 }
 
-.product-action-button svg {
+.almacen-action-button svg {
   width: 18px;
   height: 18px;
 }
 
 /* Pagination */
-.products-pagination {
+.almacen-pagination {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -468,45 +468,45 @@
 
 /* Responsive Design */
 @media (max-width: 1200px) {
-  .products-table-header,
-  .product-row {
+  .almacen-table-header,
+  .almacen-row {
     grid-template-columns: 1.5fr 1fr 0.6fr 1.2fr 0.8fr 0.8fr 1fr;
   }
 }
 
 @media (max-width: 1024px) {
-  .products-header {
+  .almacen-header {
     padding: 20px 24px;
   }
 
-  .products-content {
+  .almacen-content {
     padding: 24px;
   }
 
-  .products-table-header {
+  .almacen-table-header {
     display: none;
   }
 
-  .product-row {
+  .almacen-row {
     grid-template-columns: 1fr;
     gap: 16px;
     padding: 20px;
   }
 
-  .product-cell-product,
-  .product-cell-sku,
-  .product-cell-locations,
-  .product-cell-stock,
-  .product-cell-status {
+  .almacen-cell-product,
+  .almacen-cell-sku,
+  .almacen-cell-locations,
+  .almacen-cell-stock,
+  .almacen-cell-status {
     grid-column: 1;
   }
 
-  .product-cell-product {
+  .almacen-cell-product {
     padding-bottom: 12px;
     border-bottom: 1px solid #E9ECEF;
   }
 
-  .product-cell-actions {
+  .almacen-cell-actions {
     grid-column: 1;
     justify-content: flex-start;
     margin-top: 12px;
@@ -514,7 +514,7 @@
 }
 
 @media (max-width: 768px) {
-  .products-header {
+  .almacen-header {
     padding: 16px;
   }
 
@@ -522,11 +522,11 @@
     font-size: 24px;
   }
 
-  .products-content {
+  .almacen-content {
     padding: 16px;
   }
 
-  .products-toolbar {
+  .almacen-toolbar {
     flex-direction: column;
     align-items: stretch;
   }
@@ -549,7 +549,7 @@
     justify-content: center;
   }
 
-  .products-pagination {
+  .almacen-pagination {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
@@ -579,21 +579,21 @@
     width: 100%;
   }
 
-  .product-image-box,
-  .product-image {
+  .almacen-image-box,
+  .almacen-image {
     width: 50px;
     height: 50px;
   }
 
-  .product-name {
+  .almacen-name {
     font-size: 14px;
   }
 
-  .product-action-button {
+  .almacen-action-button {
     flex: 1;
   }
 
-  .product-cell-actions {
+  .almacen-cell-actions {
     width: 100%;
   }
 
