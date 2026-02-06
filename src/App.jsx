@@ -4,9 +4,10 @@ import OrderDetails from './OrderDetails'
 import Products from './Products'
 import Almacen from './Almacen'
 import Operators from './Operators'
+import Replenishment from './Replenishment'
 
 function App() {
-  const [currentView, setCurrentView] = useState('orders') // 'orders', 'products', 'almacen', or 'operators'
+  const [currentView, setCurrentView] = useState('orders') // 'orders', 'products', 'almacen', 'operators', or 'replenishment'
   const [showOrderDetails, setShowOrderDetails] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState(null)
   const [orders, setOrders] = useState([])
@@ -199,6 +200,13 @@ function App() {
             <span className="nav-text">Operarios</span>
           </button>
 
+          <button className={`nav-item ${currentView === 'replenishment' ? 'active' : ''}`} onClick={() => setCurrentView('replenishment')}>
+            <svg className="nav-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4.5 3.75C4.5 3.55109 4.57902 3.36032 4.71967 3.21967C4.86032 3.07902 5.05109 3 5.25 3H18.75C18.9489 3 19.1397 3.07902 19.2803 3.21967C19.421 3.36032 19.5 3.55109 19.5 3.75V8.25C19.5 8.44891 19.421 8.63968 19.2803 8.78033C19.1397 8.92098 18.9489 9 18.75 9H5.25C5.05109 9 4.86032 8.92098 4.71967 8.78033C4.57902 8.63968 4.5 8.44891 4.5 8.25V3.75ZM6 4.5V7.5H18V4.5H6ZM4.5 11.25C4.5 11.0511 4.57902 10.8603 4.71967 10.7197C4.86032 10.579 5.05109 10.5 5.25 10.5H11.25C11.4489 10.5 11.6397 10.579 11.7803 10.7197C11.921 10.8603 12 11.0511 12 11.25V20.25C12 20.4489 11.921 20.6397 11.7803 20.7803C11.6397 20.921 11.4489 21 11.25 21H5.25C5.05109 21 4.86032 20.921 4.71967 20.7803C4.57902 20.6397 4.5 20.4489 4.5 20.25V11.25ZM6 12V19.5H10.5V12H6ZM13.5 11.25C13.5 11.0511 13.579 10.8603 13.7197 10.7197C13.8603 10.579 14.0511 10.5 14.25 10.5H18.75C18.9489 10.5 19.1397 10.579 19.2803 10.7197C19.421 10.8603 19.5 11.0511 19.5 11.25V20.25C19.5 20.4489 19.421 20.6397 19.2803 20.7803C19.1397 20.921 18.9489 21 18.75 21H14.25C14.0511 21 13.8603 20.921 13.7197 20.7803C13.579 20.6397 13.5 20.4489 13.5 20.25V11.25ZM15 12V19.5H18V12H15Z" fill="#94A3B8"/>
+            </svg>
+            <span className="nav-text">Reposición</span>
+          </button>
+
           <button className="nav-item">
             <svg className="nav-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M21 18.75H20.25V3.75C20.25 3.55109 20.171 3.36032 20.0303 3.21967C19.8897 3.07902 19.6989 3 19.5 3H14.25C14.0511 3 13.8603 3.07902 13.7197 3.21967C13.579 3.36032 13.5 3.55109 13.5 3.75V7.5H9C8.80109 7.5 8.61032 7.57902 8.46967 7.71967C8.32902 7.86032 8.25 8.05109 8.25 8.25V12H4.5C4.30109 12 4.11032 12.079 3.96967 12.2197C3.82902 12.3603 3.75 12.5511 3.75 12.75V18.75H3C2.80109 18.75 2.61032 18.829 2.46967 18.9697C2.32902 19.1103 2.25 19.3011 2.25 19.5C2.25 19.6989 2.32902 19.8897 2.46967 20.0303C2.61032 20.171 2.80109 20.25 3 20.25H21C21.1989 20.25 21.3897 20.171 21.5303 20.0303C21.671 19.8897 21.75 19.6989 21.75 19.5C21.75 19.3011 21.671 19.1103 21.5303 18.9697C21.3897 18.829 21.1989 18.75 21 18.75ZM15 4.5H18.75V18.75H15V4.5ZM9.75 9H13.5V18.75H9.75V9ZM5.25 13.5H8.25V18.75H5.25V13.5Z" fill="#94A3B8"/>
@@ -223,6 +231,8 @@ function App() {
           <Almacen onBack={() => setCurrentView('orders')} />
         ) : currentView === 'operators' ? (
           <Operators />
+        ) : currentView === 'replenishment' ? (
+          <Replenishment onBack={() => setCurrentView('orders')} />
         ) : (
           <>
         {/* Dashboard Header */}
