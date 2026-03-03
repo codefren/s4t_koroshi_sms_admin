@@ -1,9 +1,8 @@
 /**
  * Servicio para interactuar con la API de Ubicaciones de Productos
- * Base URL: http://localhost:8000/api/v1
  */
 
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+import { API_BASE_URL } from '../config/api'
 
 export const locationService = {
   /**
@@ -13,9 +12,12 @@ export const locationService = {
    * @param {boolean} includeInactive - Incluir ubicaciones inactivas
    * @returns {Promise<Object>} Ubicaciones transformadas para el frontend
    */
-  async getLocationsByProduct(productId, includeInactive = false) {
+  async getLocationsByProduct(productId, includeInactive = false, almacenId) {
     try {
       const params = new URLSearchParams();
+      if (almacenId !== undefined && almacenId !== null) {
+        params.append('almacen_id', almacenId);
+      }
       if (includeInactive) {
         params.append('include_inactive', 'true');
       }
@@ -25,7 +27,6 @@ export const locationService = {
       const response = await fetch(url, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
       });
       
       if (!response.ok) {
@@ -44,26 +45,28 @@ export const locationService = {
         product_sku: data.product_sku,
         total_locations: data.total_locations,
         total_stock: data.total_stock,
-        locations: data.locations.map(loc => ({
-          location_id: loc.id,
-          pasillo: loc.pasillo,
-          lado: loc.lado === "IZQUIERDA" ? "Izquierdo" : "Derecho",
-          ladoOriginal: loc.lado, // Guardar original para API
-          ubicacion: loc.code,
-          ubicacionCode: loc.ubicacion, // Código sin formato
-          zona: `Pasillo ${loc.pasillo}`,
-          altura: `Nivel ${loc.altura}`,
-          alturaNumero: loc.altura, // Número original para API
-          stock_actual: loc.stock_actual,
-          stock_max: loc.stock_actual + 20, // TODO: Obtener de API cuando esté disponible
-          stock_min: loc.stock_minimo,
-          stock_percent: Math.round(
-            (loc.stock_actual / (loc.stock_actual + 20)) * 100
-          ),
-          stock_status: loc.stock_actual >= loc.stock_minimo ? "good" : "low",
-          prioridad: loc.prioridad,
-          activa: loc.activa
-        }))
+        locations: data.locations.map(loc => {
+          const stockMax = 100;
+          return {
+            id: loc.id,
+            locationId: loc.id,
+            pasillo: loc.pasillo,
+            lado: loc.lado === "IZQUIERDA" ? "Izquierdo" : "Derecho",
+            ladoOriginal: loc.lado,
+            ubicacion: loc.code,
+            ubicacionCode: loc.ubicacion,
+            zona: `Pasillo ${loc.pasillo}`,
+            altura: `Nivel ${loc.altura}`,
+            alturaNumero: loc.altura,
+            stockActual: loc.stock_actual,
+            stockMax: stockMax,
+            stockMin: loc.stock_minimo,
+            stockPercent: Math.round((loc.stock_actual / stockMax) * 100),
+            stockStatus: loc.stock_actual >= loc.stock_minimo ? "good" : "low",
+            prioridad: loc.prioridad,
+            activa: loc.activa
+          };
+        })
       };
     } catch (error) {
       console.error('Error al obtener ubicaciones:', error);
@@ -101,8 +104,7 @@ export const locationService = {
           headers: {
             'Content-Type': 'application/json',
           },
-          mode: 'cors',
-          body: JSON.stringify(apiData)
+            body: JSON.stringify(apiData)
         }
       );
       
@@ -155,8 +157,7 @@ export const locationService = {
           headers: {
             'Content-Type': 'application/json',
           },
-          mode: 'cors',
-          body: JSON.stringify(apiUpdates)
+            body: JSON.stringify(apiUpdates)
         }
       );
       
@@ -185,8 +186,7 @@ export const locationService = {
         `${API_BASE_URL}/products/${productId}/locations/${locationId}`,
         {
           method: 'DELETE',
-          mode: 'cors',
-        }
+          }
       );
       
       if (!response.ok) {

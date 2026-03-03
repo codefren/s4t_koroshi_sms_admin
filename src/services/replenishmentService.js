@@ -1,9 +1,8 @@
 /**
  * Servicio para interactuar con la API de Solicitudes de Reposición
- * Base URL: http://localhost:8000/api/v1
  */
 
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+import { API_BASE_URL } from '../config/api'
 
 export const replenishmentService = {
   /**
@@ -46,7 +45,6 @@ export const replenishmentService = {
       const response = await fetch(url, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
       });
       
       if (!response.ok) {
@@ -71,7 +69,6 @@ export const replenishmentService = {
       const response = await fetch(`${API_BASE_URL}/replenishment/requests/${requestId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
       });
       
       if (!response.ok) {
@@ -100,7 +97,6 @@ export const replenishmentService = {
       const response = await fetch(`${API_BASE_URL}/replenishment/requests/${requestId}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
         body: JSON.stringify({ executor_id: executorId })
       });
       
@@ -127,7 +123,6 @@ export const replenishmentService = {
       const response = await fetch(`${API_BASE_URL}/replenishment/requests/${requestId}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
       });
       
       if (!response.ok) {
@@ -154,7 +149,6 @@ export const replenishmentService = {
       const response = await fetch(`${API_BASE_URL}/replenishment/requests/${requestId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
         body: JSON.stringify({ notes })
       });
       

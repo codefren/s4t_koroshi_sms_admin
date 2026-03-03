@@ -13,6 +13,7 @@ function Replenishment({ onBack }) {
   const [statusFilter, setStatusFilter] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
   const [almacenFilter, setAlmacenFilter] = useState('')
+  const [productFilter, setProductFilter] = useState('')
   
   // Paginación
   const [pagination, setPagination] = useState({
@@ -29,7 +30,8 @@ function Replenishment({ onBack }) {
     normal: 0,
     ready: 0,
     inProgress: 0,
-    waitingStock: 0
+    waitingStock: 0,
+    completed: 0
   })
 
   // Cargar solicitudes
@@ -42,6 +44,7 @@ function Replenishment({ onBack }) {
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
         almacen_id: almacenFilter || undefined,
+        product_id: productFilter || undefined,
         page: pagination.page,
         perPage: pagination.perPage
       })
@@ -55,27 +58,25 @@ function Replenishment({ onBack }) {
         totalPages: data.total_pages || 0
       })
       
-      // Calcular estadísticas
-      calculateStats(data.requests || [])
+      // Usar status_counts y priority_counts del API
+      const statusCounts = data.status_counts || {}
+      const priorityCounts = data.priority_counts || {}
+      
+      setStats({
+        urgent: priorityCounts.URGENT || 0,
+        high: priorityCounts.HIGH || 0,
+        normal: priorityCounts.NORMAL || 0,
+        ready: statusCounts.READY || 0,
+        inProgress: statusCounts.IN_PROGRESS || 0,
+        waitingStock: statusCounts.WAITING_STOCK || 0,
+        completed: statusCounts.COMPLETED || 0
+      })
       
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }
-
-  // Calcular estadísticas
-  const calculateStats = (requestsList) => {
-    const stats = {
-      urgent: requestsList.filter(r => r.priority === 'URGENT').length,
-      high: requestsList.filter(r => r.priority === 'HIGH').length,
-      normal: requestsList.filter(r => r.priority === 'NORMAL').length,
-      ready: requestsList.filter(r => r.status === 'READY').length,
-      inProgress: requestsList.filter(r => r.status === 'IN_PROGRESS').length,
-      waitingStock: requestsList.filter(r => r.status === 'WAITING_STOCK').length
-    }
-    setStats(stats)
   }
 
   // Ver detalle
@@ -133,7 +134,7 @@ function Replenishment({ onBack }) {
   // Cargar al montar y cuando cambien filtros
   useEffect(() => {
     fetchRequests()
-  }, [statusFilter, priorityFilter, almacenFilter, pagination.page])
+  }, [statusFilter, priorityFilter, almacenFilter, productFilter, pagination.page])
 
   // Helpers
   const getPriorityIcon = (priority) => {
@@ -230,6 +231,14 @@ function Replenishment({ onBack }) {
             <div className="stat-label">En Proceso</div>
           </div>
         </div>
+
+        <div className="stat-card status completed">
+          <div className="stat-icon">✔️</div>
+          <div className="stat-info">
+            <div className="stat-value">{stats.completed}</div>
+            <div className="stat-label">Completadas</div>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -267,6 +276,14 @@ function Replenishment({ onBack }) {
           <option value="1">Almacén 1</option>
           <option value="2">Almacén 2</option>
         </select>
+
+        <input
+          type="number"
+          className="filter-input"
+          placeholder="ID Producto"
+          value={productFilter}
+          onChange={(e) => setProductFilter(e.target.value)}
+        />
 
         <button className="refresh-button" onClick={fetchRequests}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -404,6 +421,31 @@ function Replenishment({ onBack }) {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && !error && pagination.totalPages > 1 && (
+          <div className="pagination-controls">
+            <button
+              className="pagination-btn"
+              disabled={pagination.page === 1}
+              onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+            >
+              ← Anterior
+            </button>
+            
+            <span className="pagination-info">
+              Página {pagination.page} de {pagination.totalPages} ({pagination.total} total)
+            </span>
+            
+            <button
+              className="pagination-btn"
+              disabled={pagination.page >= pagination.totalPages}
+              onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+            >
+              Siguiente →
+            </button>
           </div>
         )}
       </div>

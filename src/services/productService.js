@@ -1,9 +1,8 @@
 /**
  * Servicio para interactuar con la API de Productos
- * Base URL: http://localhost:8000/api/v1
  */
 
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+import { API_BASE_URL } from '../config/api'
 
 export const productService = {
   /**
@@ -48,7 +47,6 @@ export const productService = {
       const response = await fetch(url, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
       });
       
       if (!response.ok) {
@@ -73,7 +71,6 @@ export const productService = {
       const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
       });
       
       if (!response.ok) {
@@ -101,7 +98,6 @@ export const productService = {
       const response = await fetch(`${API_BASE_URL}/products/${productId}/locations`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
       });
       
       if (!response.ok) {
@@ -129,7 +125,6 @@ export const productService = {
       const response = await fetch(`${API_BASE_URL}/products/${productId}/stock-summary`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
       });
       
       if (!response.ok) {

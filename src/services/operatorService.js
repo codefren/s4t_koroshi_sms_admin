@@ -1,9 +1,8 @@
 /**
  * Servicio para interactuar con la API de Operarios
- * Base URL: http://localhost:8000/api/v1
  */
 
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+import { API_BASE_URL } from '../config/api'
 
 export const operatorService = {
   /**
@@ -21,7 +20,6 @@ export const operatorService = {
       const response = await fetch(url, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
       });
       
       if (!response.ok) {
@@ -46,7 +44,6 @@ export const operatorService = {
       const response = await fetch(`${API_BASE_URL}/operators/${operatorId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
       });
       
       if (!response.ok) {

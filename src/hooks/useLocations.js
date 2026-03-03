@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { locationService } from '../services/locationService';
 
-export const useLocations = (productId) => {
+export const useLocations = (productId, almacenId) => {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,7 +26,7 @@ export const useLocations = (productId) => {
       setLoading(true);
       setError(null);
       
-      const data = await locationService.getLocationsByProduct(productId);
+      const data = await locationService.getLocationsByProduct(productId, false, almacenId);
       
       setLocations(data.locations);
       setTotalLocations(data.total_locations);
@@ -43,7 +43,7 @@ export const useLocations = (productId) => {
     } finally {
       setLoading(false);
     }
-  }, [productId]);
+  }, [productId, almacenId]);
 
   /**
    * Efecto para cargar ubicaciones cuando cambia el productId

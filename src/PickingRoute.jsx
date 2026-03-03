@@ -3,7 +3,7 @@ import './PickingRoute.css'
 import { useLocations } from './hooks/useLocations'
 import { productService } from './services/productService'
 
-function PickingRoute({ onBack, product }) {
+function PickingRoute({ onBack, product, almacenId }) {
   // Estados del formulario
   const [formData, setFormData] = useState({
     pasillo: '',
@@ -32,7 +32,7 @@ function PickingRoute({ onBack, product }) {
     updateLocation,
     removeLocation,
     clearError
-  } = useLocations(product?.id)
+  } = useLocations(product?.id, almacenId)
 
   // Cargar detalle del producto al montar
   useEffect(() => {
@@ -147,7 +147,7 @@ function PickingRoute({ onBack, product }) {
       lado: location.lado,
       ubicacion: location.ubicacionCode || location.ubicacion,
       altura: location.altura,
-      stockMinimo: location.stock_min.toString()
+      stockMinimo: location.stockMin.toString()
     })
     setShowEditModal(true)
   }
@@ -163,7 +163,7 @@ function PickingRoute({ onBack, product }) {
       stockMinimo: parseInt(editingLocation.stockMinimo) || 0
     }
 
-    const result = await updateLocation(editingLocation.location_id, updates)
+    const result = await updateLocation(editingLocation.locationId, updates)
 
     if (result.success) {
       setSuccessMessage('Ubicación actualizada exitosamente')
@@ -178,7 +178,7 @@ function PickingRoute({ onBack, product }) {
       return
     }
 
-    const result = await removeLocation(location.location_id)
+    const result = await removeLocation(location.locationId)
 
     if (result.success) {
       setSuccessMessage('Ubicación eliminada exitosamente')
@@ -204,7 +204,7 @@ function PickingRoute({ onBack, product }) {
         </button>
         
         <div className="header-section">
-          <h1 className="page-heading">Crear Ruta de Picking</h1>
+          <h1 className="page-heading">Almacenamiento de Producto</h1>
         </div>
       </div>
 
@@ -278,6 +278,25 @@ function PickingRoute({ onBack, product }) {
               </div>
             </div>
           </div>
+
+          {/* EANs Display */}
+          {productDetail?.eans && productDetail.eans.length > 0 && (
+            <div className="form-row">
+              <div className="form-group full-width">
+                <label className="form-label">Códigos EAN</label>
+                <div className="eans-container">
+                  {productDetail.eans.map((ean, index) => (
+                    <span key={index} className="ean-badge">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 6H5V18H3V6ZM7 6H9V18H7V6ZM10 6H11V18H10V6ZM12 6H14V18H12V6ZM16 6H17V18H16V6ZM18 6H21V18H18V6Z" fill="currentColor"/>
+                      </svg>
+                      {ean}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Location Config Card */}
@@ -457,7 +476,7 @@ function PickingRoute({ onBack, product }) {
                           <div 
                             className="stock-bar-fill-loc" 
                             style={{ 
-                              width: '100%',
+                              width: `${Math.min(location.stockPercent, 100)}%`,
                               background: getStockColor(location.stockStatus)
                             }}
                           ></div>
