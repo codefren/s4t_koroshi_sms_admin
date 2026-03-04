@@ -61,33 +61,60 @@ function OrderDetails({ onBack, orderId }) {
     return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
 
-  // Cargar detalle de orden desde la API
-  useEffect(() => {
-    const fetchOrderDetails = async () => {
-      try {
+  // Función para cargar detalle de orden desde la API
+  const fetchOrderDetails = async (isAutoRefresh = false) => {
+    try {
+      // Solo mostrar loading en la carga inicial
+      if (!isAutoRefresh) {
         setLoading(true)
-        const response = await fetch(`${API_BASE_URL}/orders/${orderId}/`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          mode: 'cors',
-        })
-        if (!response.ok) {
-          throw new Error(`Error al cargar el detalle de la orden: ${response.status} ${response.statusText}`)
-        }
-        const data = await response.json()
-        setOrder(data)
-      } catch (err) {
+      }
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+      })
+      if (!response.ok) {
+        throw new Error(`Error al cargar el detalle de la orden: ${response.status} ${response.statusText}`)
+      }
+      const data = await response.json()
+      setOrder(data)
+      // Limpiar error si la carga fue exitosa
+      if (error) setError(null)
+    } catch (err) {
+      // Solo mostrar error en carga inicial
+      if (!isAutoRefresh) {
         setError(err.message)
-        console.error('Error completo:', err)
-      } finally {
+      }
+      console.error('Error completo:', err)
+    } finally {
+      if (!isAutoRefresh) {
         setLoading(false)
       }
     }
+  }
 
+  // Cargar detalle de orden al montar el componente
+  useEffect(() => {
     if (orderId) {
       fetchOrderDetails()
+    }
+  }, [orderId])
+
+  // Actualización automática cada 3 segundos
+  useEffect(() => {
+    if (!orderId) return
+
+    const interval = setInterval(() => {
+      console.log('🔄 Actualizando detalle de orden automáticamente...')
+      fetchOrderDetails(true) // true = es un refresco automático
+    }, 3000) // 3 segundos
+
+    // Limpiar el intervalo cuando el componente se desmonte
+    return () => {
+      clearInterval(interval)
+      console.log('⏹️ Polling de detalle detenido')
     }
   }, [orderId])
 
@@ -278,12 +305,26 @@ function OrderDetails({ onBack, orderId }) {
                       <span className="product-spec">Ubicación: {producto.ubicacion}</span>
                       <span className="product-spec">Talla: {producto.talla}</span>
                       <span className="product-spec">Color: {producto.color}</span>
-                      <span className={`product-spec ${producto.estado === 'COMPLETED' ? 'text-green-600' : 'text-orange-600'}`}>
-                        Estado: {producto.estado === 'COMPLETED' ? 'Completado' : 'Pendiente'} ({producto.cantidad_servida}/{producto.cantidad_solicitada})
-                      </span>
+                    </div>
+                    <div className="product-quantities" style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>Solicitada</span>
+                        <span style={{ fontSize: '16px', fontWeight: '700', color: '#1E293B' }}>{producto.cantidad_solicitada}</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>Servida</span>
+                        <span style={{ fontSize: '16px', fontWeight: '700', color: producto.cantidad_servida >= producto.cantidad_solicitada ? '#10B981' : '#F59E0B' }}>
+                          {producto.cantidad_servida}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>Estado</span>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: producto.estado === 'COMPLETED' ? '#10B981' : '#F59E0B' }}>
+                          {producto.estado === 'COMPLETED' ? 'Completado' : 'Pendiente'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="product-quantity">{producto.cantidad_solicitada}</div>
                 </div>
                 ))}
               </div>

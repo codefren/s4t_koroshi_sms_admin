@@ -7,11 +7,26 @@ import { API_BASE_URL } from '../config/api'
 export const orderService = {
   /**
    * GET /orders/
-   * Lista todas las órdenes
+   * Lista todas las órdenes con paginación y filtros opcionales
+   * @param {Object} options - Opciones de paginación y filtros
+   * @param {number} options.skip - Número de registros a saltar (default: 0)
+   * @param {number} options.limit - Límite de registros (default: 100)
+   * @param {string} options.prioridad - Filtro por prioridad (URGENT, HIGH, NORMAL, LOW)
+   * @param {string} options.estado_codigo - Filtro por estado (PENDING, ASSIGNED, IN_PICKING, etc.)
+   * @param {AbortSignal} options.signal - Señal para cancelar la petición
    * @returns {Promise<Array>} Lista de órdenes
    */
-  async getAll(signal) {
-    const response = await fetch(`${API_BASE_URL}/orders/`, {
+  async getAll(options = {}) {
+    const { skip = 0, limit = 100, prioridad, estado_codigo, signal } = options
+    
+    // Construir query params
+    const params = new URLSearchParams()
+    params.append('skip', skip.toString())
+    params.append('limit', limit.toString())
+    if (prioridad) params.append('prioridad', prioridad)
+    if (estado_codigo) params.append('estado_codigo', estado_codigo)
+    
+    const response = await fetch(`${API_BASE_URL}/orders/?${params.toString()}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       signal,

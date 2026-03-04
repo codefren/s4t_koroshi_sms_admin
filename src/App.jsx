@@ -21,6 +21,9 @@ function App() {
   const [error, setError] = useState(null)
   const [lastUpdate, setLastUpdate] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [pagination, setPagination] = useState({ skip: 0, limit: 100 })
+  const [filters, setFilters] = useState({ prioridad: '', estado_codigo: '' })
+  const [totalOrders, setTotalOrders] = useState(0)
   const abortControllerRef = useRef(null)
 
   // Función para actualizar la prioridad de una orden
@@ -58,8 +61,16 @@ function App() {
         setIsRefreshing(true)
       }
       
-      const data = await orderService.getAll(abortControllerRef.current.signal)
+      const data = await orderService.getAll({
+        skip: pagination.skip,
+        limit: pagination.limit,
+        prioridad: filters.prioridad || undefined,
+        estado_codigo: filters.estado_codigo || undefined,
+        signal: abortControllerRef.current.signal
+      })
+      
       setOrders(data)
+      setTotalOrders(data.length) // Nota: idealmente el backend debería devolver el total
       setLastUpdate(new Date())
       // Limpiar errores si la carga fue exitosa
       if (error) setError(null)
@@ -79,10 +90,10 @@ function App() {
     }
   }
 
-  // Cargar órdenes al montar el componente
+  // Cargar órdenes al montar el componente y cuando cambien filtros/paginación
   useEffect(() => {
     fetchOrders()
-  }, [])
+  }, [pagination.skip, pagination.limit, filters.prioridad, filters.estado_codigo])
 
   // Actualización automática cada 3 segundos
   useEffect(() => {
@@ -90,7 +101,7 @@ function App() {
     if (showOrderDetails) return
 
     const interval = setInterval(() => {
-      console.log('🔄 Actualizando órdenes automáticamente...')
+      console.log('🔄 Actualizando órdenes automáticamente con filtros...')
       fetchOrders(true) // true = es un refresco automático
     }, 3000) // 3 segundos
 
@@ -99,7 +110,7 @@ function App() {
       clearInterval(interval)
       console.log('⏹️ Polling detenido')
     }
-  }, [showOrderDetails])
+  }, [showOrderDetails, pagination.skip, pagination.limit, filters.prioridad, filters.estado_codigo])
 
   const handleViewOrder = (orderId) => {
     setSelectedOrderId(orderId)
@@ -153,9 +164,14 @@ function App() {
             error={error}
             lastUpdate={lastUpdate}
             isRefreshing={isRefreshing}
+            pagination={pagination}
+            filters={filters}
+            totalOrders={totalOrders}
             onViewOrder={handleViewOrder}
             onViewPacking={handleViewPacking}
             onUpdatePriority={updateOrderPriority}
+            onPaginationChange={setPagination}
+            onFiltersChange={setFilters}
           />
         )}
         </Suspense>

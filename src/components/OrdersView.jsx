@@ -31,13 +31,16 @@ function OrdersView({
   error,
   lastUpdate,
   isRefreshing,
+  pagination,
+  filters,
+  totalOrders,
   onViewOrder,
   onViewPacking,
   onUpdatePriority,
+  onPaginationChange,
+  onFiltersChange,
 }) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [priorityFilter, setPriorityFilter] = useState('')
   const [operatorFilter, setOperatorFilter] = useState('')
 
   // Extraer lista única de operarios de las órdenes
@@ -49,14 +52,10 @@ function OrdersView({
     return Array.from(ops).sort()
   }, [orders])
 
-  // Filtrar órdenes
+  // Filtrado client-side solo para operario y búsqueda (estado y prioridad son server-side)
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
-      // Filtro por estado
-      if (statusFilter && order.estado_codigo !== statusFilter) return false
-      // Filtro por prioridad
-      if (priorityFilter && order.prioridad !== priorityFilter) return false
-      // Filtro por operario
+      // Filtro por operario (client-side)
       if (operatorFilter) {
         if (operatorFilter === '__unassigned__') {
           if (order.operario_asignado) return false
@@ -64,7 +63,7 @@ function OrdersView({
           return false
         }
       }
-      // Búsqueda por texto
+      // Búsqueda por texto (client-side)
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase()
         const matchesOrder = order.numero_orden?.toLowerCase().includes(term)
@@ -74,7 +73,13 @@ function OrdersView({
       }
       return true
     })
-  }, [orders, statusFilter, priorityFilter, operatorFilter, searchTerm])
+  }, [orders, operatorFilter, searchTerm])
+
+  // Calcular paginación
+  const currentPage = Math.floor(pagination.skip / pagination.limit) + 1
+  const totalPages = Math.ceil(totalOrders / pagination.limit)
+  const hasNextPage = orders.length === pagination.limit
+  const hasPrevPage = pagination.skip > 0
 
   // Estadísticas dinámicas calculadas sobre las órdenes totales
   const stats = useMemo(() => {
@@ -209,8 +214,11 @@ function OrdersView({
             <label className="filter-label">Estado:</label>
             <select
               className="filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              value={filters.estado_codigo}
+              onChange={(e) => {
+                onFiltersChange({ ...filters, estado_codigo: e.target.value })
+                onPaginationChange({ ...pagination, skip: 0 }) // Reset to first page
+              }}
             >
               {STATUS_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -222,8 +230,11 @@ function OrdersView({
             <label className="filter-label">Prioridad:</label>
             <select
               className="filter-select"
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
+              value={filters.prioridad}
+              onChange={(e) => {
+                onFiltersChange({ ...filters, prioridad: e.target.value })
+                onPaginationChange({ ...pagination, skip: 0 }) // Reset to first page
+              }}
             >
               {PRIORITY_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -243,6 +254,21 @@ function OrdersView({
               {operatorOptions.map(op => (
                 <option key={op} value={op}>{op}</option>
               ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label className="filter-label">Por página:</label>
+            <select
+              className="filter-select"
+              value={pagination.limit}
+              onChange={(e) => {
+                onPaginationChange({ ...pagination, limit: parseInt(e.target.value), skip: 0 })
+              }}
+            >
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
             </select>
           </div>
         </div>
@@ -390,6 +416,32 @@ function OrdersView({
             ))}
           </div>
         </div>
+
+        {/* Pagination Controls */}
+        {!loading && !error && totalOrders > 0 && (
+          <div className="pagination-controls">
+            <button
+              className="pagination-btn"
+              disabled={!hasPrevPage}
+              onClick={() => onPaginationChange({ ...pagination, skip: Math.max(0, pagination.skip - pagination.limit) })}
+            >
+              ← Anterior
+            </button>
+            
+            <div className="pagination-info">
+              Página {currentPage} - Mostrando {orders.length} órdenes
+              {filters.prioridad || filters.estado_codigo ? ' (con filtros)' : ''}
+            </div>
+            
+            <button
+              className="pagination-btn"
+              disabled={!hasNextPage}
+              onClick={() => onPaginationChange({ ...pagination, skip: pagination.skip + pagination.limit })}
+            >
+              Siguiente →
+            </button>
+          </div>
+        )}
       </div>
     </>
   )
