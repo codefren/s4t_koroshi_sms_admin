@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import './OrderDetails.css'
+import { API_BASE_URL } from './config/api'
 
 function OrderDetails({ onBack, orderId }) {
   const [order, setOrder] = useState(null)
@@ -65,7 +66,7 @@ function OrderDetails({ onBack, orderId }) {
     const fetchOrderDetails = async () => {
       try {
         setLoading(true)
-        const response = await fetch(`http://localhost:8000/api/v1/orders/${orderId}/`, {
+        const response = await fetch(`${API_BASE_URL}/orders/${orderId}/`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -95,7 +96,7 @@ function OrderDetails({ onBack, orderId }) {
     const fetchOperators = async () => {
       try {
         setLoadingOperators(true)
-        const response = await fetch('http://localhost:8000/api/v1/operators?activo=true', {
+        const response = await fetch(`${API_BASE_URL}/operators?activo=true`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -139,7 +140,7 @@ function OrderDetails({ onBack, orderId }) {
       setAssignError(null)
       setAssignSuccess(false)
 
-      const response = await fetch(`http://localhost:8000/api/v1/orders/${orderId}/assign-operator/`, {
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/assign-operator/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

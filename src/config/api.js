@@ -5,6 +5,15 @@
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
 
 /**
+ * IDs de almacenes del sistema
+ * Centralizado aquí para fácil mantenimiento
+ */
+export const WAREHOUSE_IDS = {
+  PICKING: 3,           // Almacén de Picking
+  REPLENISHMENT: 4,     // Almacén de Reposición
+}
+
+/**
  * Wrapper para fetch con configuración por defecto
  * @param {string} endpoint - Ruta relativa del endpoint (ej: '/orders')
  * @param {Object} options - Opciones adicionales de fetch

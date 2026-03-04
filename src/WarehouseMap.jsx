@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import './WarehouseMap.css'
 import { warehouseService } from './services/warehouseService'
+import { WAREHOUSE_IDS } from './config/api'
 import WarehouseAisle from './components/WarehouseAisle'
 import WarehouseLocationModal from './components/WarehouseLocationModal'
 
@@ -12,7 +13,7 @@ function WarehouseMap() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedLocation, setSelectedLocation] = useState(null)
   const [showModal, setShowModal] = useState(false)
-  const [almacenId] = useState(1)
+  const [almacenId] = useState(WAREHOUSE_IDS.PICKING)
 
   useEffect(() => {
     fetchLocations()
