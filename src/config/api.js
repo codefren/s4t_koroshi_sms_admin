@@ -9,8 +9,8 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localho
  * Centralizado aquí para fácil mantenimiento
  */
 export const WAREHOUSE_IDS = {
-  PICKING: 3,           // Almacén de Picking
-  REPLENISHMENT: 4,     // Almacén de Reposición
+  PICKING: 2,           // Almacén de Picking
+  REPLENISHMENT: 1,     // Almacén de Reposición
 }
 
 /**
