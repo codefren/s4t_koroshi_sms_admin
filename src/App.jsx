@@ -97,20 +97,22 @@ function App() {
 
   // Actualización automática cada 3 segundos
   useEffect(() => {
-    // Solo ejecutar polling cuando estemos en la vista del dashboard (no en detalle)
-    if (showOrderDetails) return
+    // Solo ejecutar polling cuando estemos en la vista de lista de órdenes
+    if (currentView !== 'orders' || showOrderDetails || showPackingDistribution) {
+      return
+    }
 
     const interval = setInterval(() => {
       console.log('🔄 Actualizando órdenes automáticamente con filtros...')
       fetchOrders(true) // true = es un refresco automático
     }, 3000) // 3 segundos
 
-    // Limpiar el intervalo cuando el componente se desmonte o cambie a detalle
+    // Limpiar el intervalo cuando el componente se desmonte o cambie de vista
     return () => {
       clearInterval(interval)
       console.log('⏹️ Polling detenido')
     }
-  }, [showOrderDetails, pagination.skip, pagination.limit, filters.prioridad, filters.estado_codigo])
+  }, [currentView, showOrderDetails, showPackingDistribution, pagination.skip, pagination.limit, filters.prioridad, filters.estado_codigo])
 
   const handleViewOrder = (orderId) => {
     setSelectedOrderId(orderId)
