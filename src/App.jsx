@@ -22,7 +22,7 @@ function App() {
   const [lastUpdate, setLastUpdate] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [pagination, setPagination] = useState({ skip: 0, limit: 100 })
-  const [filters, setFilters] = useState({ prioridad: '', estado_codigo: '' })
+  const [filters, setFilters] = useState({ prioridad: '', estado_codigo: '', almacen_id: '', fecha_desde: '', fecha_hasta: '' })
   const [totalOrders, setTotalOrders] = useState(0)
   const abortControllerRef = useRef(null)
 
@@ -66,6 +66,9 @@ function App() {
         limit: pagination.limit,
         prioridad: filters.prioridad || undefined,
         estado_codigo: filters.estado_codigo || undefined,
+        almacen_id: filters.almacen_id || undefined,
+        fecha_desde: filters.fecha_desde || undefined,
+        fecha_hasta: filters.fecha_hasta || undefined,
         signal: abortControllerRef.current.signal
       })
       
@@ -112,7 +115,7 @@ function App() {
       clearInterval(interval)
       console.log('⏹️ Polling detenido')
     }
-  }, [currentView, showOrderDetails, showPackingDistribution, pagination.skip, pagination.limit, filters.prioridad, filters.estado_codigo])
+  }, [currentView, showOrderDetails, showPackingDistribution, pagination.skip, pagination.limit, filters.prioridad, filters.estado_codigo, filters.almacen_id, filters.fecha_desde, filters.fecha_hasta])
 
   const handleViewOrder = (orderId) => {
     setSelectedOrderId(orderId)

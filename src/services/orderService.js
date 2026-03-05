@@ -13,11 +13,14 @@ export const orderService = {
    * @param {number} options.limit - Límite de registros (default: 100)
    * @param {string} options.prioridad - Filtro por prioridad (URGENT, HIGH, NORMAL, LOW)
    * @param {string} options.estado_codigo - Filtro por estado (PENDING, ASSIGNED, IN_PICKING, etc.)
+   * @param {number} options.almacen_id - Filtro por almacén
+   * @param {string} options.fecha_desde - Filtro por fecha desde (formato: YYYY-MM-DD)
+   * @param {string} options.fecha_hasta - Filtro por fecha hasta (formato: YYYY-MM-DD)
    * @param {AbortSignal} options.signal - Señal para cancelar la petición
    * @returns {Promise<Array>} Lista de órdenes
    */
   async getAll(options = {}) {
-    const { skip = 0, limit = 100, prioridad, estado_codigo, signal } = options
+    const { skip = 0, limit = 100, prioridad, estado_codigo, almacen_id, fecha_desde, fecha_hasta, signal } = options
     
     // Construir query params
     const params = new URLSearchParams()
@@ -25,6 +28,9 @@ export const orderService = {
     params.append('limit', limit.toString())
     if (prioridad) params.append('prioridad', prioridad)
     if (estado_codigo) params.append('estado_codigo', estado_codigo)
+    if (almacen_id) params.append('almacen_id', almacen_id.toString())
+    if (fecha_desde) params.append('fecha_desde', fecha_desde)
+    if (fecha_hasta) params.append('fecha_hasta', fecha_hasta)
     
     const response = await fetch(`${API_BASE_URL}/orders/?${params.toString()}`, {
       method: 'GET',

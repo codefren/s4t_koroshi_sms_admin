@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { SearchIcon, NotificationIcon, ClipboardIcon, ClockIcon, WarningIcon, CheckCircleIcon, SpinnerIcon, TimeIcon, EyeIcon, BoxIcon, AssignIcon } from './icons'
 import { getPriorityClass, getPriorityLabel, getStatusClass, formatDate } from '../utils/orderHelpers'
+import { almacenService } from '../services/almacenService'
 
 /**
  * Mapeo de opciones de filtro a valores de estado_codigo de la API
@@ -42,6 +43,24 @@ function OrdersView({
 }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [operatorFilter, setOperatorFilter] = useState('')
+  const [almacenes, setAlmacenes] = useState([])
+  const [loadingAlmacenes, setLoadingAlmacenes] = useState(false)
+
+  // Cargar lista de almacenes al montar
+  useEffect(() => {
+    const fetchAlmacenes = async () => {
+      try {
+        setLoadingAlmacenes(true)
+        const data = await almacenService.getAll({ skip: 0, limit: 100 })
+        setAlmacenes(data)
+      } catch (err) {
+        console.error('Error al cargar almacenes:', err)
+      } finally {
+        setLoadingAlmacenes(false)
+      }
+    }
+    fetchAlmacenes()
+  }, [])
 
   // Extraer lista única de operarios de las órdenes
   const operatorOptions = useMemo(() => {
@@ -243,6 +262,26 @@ function OrdersView({
           </div>
 
           <div className="filter-group">
+            <label className="filter-label">Almacén:</label>
+            <select
+              className="filter-select"
+              value={filters.almacen_id}
+              onChange={(e) => {
+                onFiltersChange({ ...filters, almacen_id: e.target.value })
+                onPaginationChange({ ...pagination, skip: 0 }) // Reset to first page
+              }}
+              disabled={loadingAlmacenes}
+            >
+              <option value="">Todos</option>
+              {almacenes.map(almacen => (
+                <option key={almacen.id} value={almacen.id}>
+                  {almacen.descripciones || almacen.codigo}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
             <label className="filter-label">Operario:</label>
             <select
               className="filter-select"
@@ -255,6 +294,32 @@ function OrdersView({
                 <option key={op} value={op}>{op}</option>
               ))}
             </select>
+          </div>
+
+          <div className="filter-group">
+            <label className="filter-label">Desde:</label>
+            <input
+              type="date"
+              className="filter-select"
+              value={filters.fecha_desde}
+              onChange={(e) => {
+                onFiltersChange({ ...filters, fecha_desde: e.target.value })
+                onPaginationChange({ ...pagination, skip: 0 })
+              }}
+            />
+          </div>
+
+          <div className="filter-group">
+            <label className="filter-label">Hasta:</label>
+            <input
+              type="date"
+              className="filter-select"
+              value={filters.fecha_hasta}
+              onChange={(e) => {
+                onFiltersChange({ ...filters, fecha_hasta: e.target.value })
+                onPaginationChange({ ...pagination, skip: 0 })
+              }}
+            />
           </div>
 
           <div className="filter-group">
