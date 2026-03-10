@@ -9,6 +9,7 @@ const Operators = lazy(() => import('./Operators'))
 const Replenishment = lazy(() => import('./Replenishment'))
 const PackingDistribution = lazy(() => import('./PackingDistribution'))
 const WarehouseMap = lazy(() => import('./WarehouseMap'))
+const StockMovements = lazy(() => import('./StockMovements'))
 import { orderService } from './services/orderService'
 
 function App() {
@@ -22,7 +23,7 @@ function App() {
   const [lastUpdate, setLastUpdate] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [pagination, setPagination] = useState({ skip: 0, limit: 100 })
-  const [filters, setFilters] = useState({ prioridad: '', estado_codigo: '', almacen_id: '', fecha_desde: '', fecha_hasta: '' })
+  const [filters, setFilters] = useState({ prioridad: '', estado_codigo: '', almacen_id: '', fecha_desde: '', fecha_hasta: '', type: '' })
   const [totalOrders, setTotalOrders] = useState(0)
   const abortControllerRef = useRef(null)
 
@@ -69,6 +70,7 @@ function App() {
         almacen_id: filters.almacen_id || undefined,
         fecha_desde: filters.fecha_desde || undefined,
         fecha_hasta: filters.fecha_hasta || undefined,
+        type: filters.type || undefined,
         signal: abortControllerRef.current.signal
       })
       
@@ -96,7 +98,7 @@ function App() {
   // Cargar órdenes al montar el componente y cuando cambien filtros/paginación
   useEffect(() => {
     fetchOrders()
-  }, [pagination.skip, pagination.limit, filters.prioridad, filters.estado_codigo])
+  }, [pagination.skip, pagination.limit, filters.prioridad, filters.estado_codigo, filters.type])
 
   // Actualización automática cada 3 segundos
   useEffect(() => {
@@ -115,7 +117,7 @@ function App() {
       clearInterval(interval)
       console.log('⏹️ Polling detenido')
     }
-  }, [currentView, showOrderDetails, showPackingDistribution, pagination.skip, pagination.limit, filters.prioridad, filters.estado_codigo, filters.almacen_id, filters.fecha_desde, filters.fecha_hasta])
+  }, [currentView, showOrderDetails, showPackingDistribution, pagination.skip, pagination.limit, filters.prioridad, filters.estado_codigo, filters.almacen_id, filters.fecha_desde, filters.fecha_hasta, filters.type])
 
   const handleViewOrder = (orderId) => {
     setSelectedOrderId(orderId)
@@ -162,6 +164,8 @@ function App() {
           <Operators />
         ) : currentView === 'replenishment' ? (
           <Replenishment onBack={() => setCurrentView('orders')} />
+        ) : currentView === 'stock-movements' ? (
+          <StockMovements />
         ) : (
           <OrdersView
             orders={orders}

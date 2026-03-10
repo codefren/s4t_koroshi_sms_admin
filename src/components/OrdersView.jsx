@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { SearchIcon, NotificationIcon, ClipboardIcon, ClockIcon, WarningIcon, CheckCircleIcon, SpinnerIcon, TimeIcon, EyeIcon, BoxIcon, AssignIcon } from './icons'
 import { getPriorityClass, getPriorityLabel, getStatusClass, formatDate } from '../utils/orderHelpers'
 import { almacenService } from '../services/almacenService'
+import { orderService } from '../services/orderService'
 
 /**
  * Mapeo de opciones de filtro a valores de estado_codigo de la API
@@ -26,6 +27,12 @@ const PRIORITY_OPTIONS = [
   { label: 'Baja', value: 'LOW' },
 ]
 
+const TYPE_OPTIONS = [
+  { label: 'Todos', value: '' },
+  { label: 'B2B', value: 'B2B' },
+  { label: 'B2C', value: 'PV' },
+]
+
 function OrdersView({
   orders,
   loading,
@@ -46,6 +53,13 @@ function OrdersView({
   const [almacenes, setAlmacenes] = useState([])
   const [loadingAlmacenes, setLoadingAlmacenes] = useState(false)
 
+  // Historia de orden
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [historyData, setHistoryData] = useState([])
+  const [historyOrderId, setHistoryOrderId] = useState(null)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState(null)
+
   // Cargar lista de almacenes al montar
   useEffect(() => {
     const fetchAlmacenes = async () => {
@@ -61,6 +75,32 @@ function OrdersView({
     }
     fetchAlmacenes()
   }, [])
+
+  // Cargar historial de una orden
+  const handleViewHistory = async (orderId, orderNumber) => {
+    try {
+      setHistoryOrderId(orderNumber || orderId)
+      setHistoryLoading(true)
+      setHistoryError(null)
+      setShowHistoryModal(true)
+      const data = await orderService.getHistory(orderId)
+      setHistoryData(Array.isArray(data) ? data : [])
+    } catch (err) {
+      setHistoryError(err.message)
+      setHistoryData([])
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
+  const formatHistoryDate = (dateString) => {
+    if (!dateString) return '-'
+    const d = new Date(dateString)
+    return d.toLocaleString('es-ES', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    })
+  }
 
   // Extraer lista única de operarios de las órdenes
   const operatorOptions = useMemo(() => {
@@ -256,6 +296,22 @@ function OrdersView({
               }}
             >
               {PRIORITY_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label className="filter-label">Tipo:</label>
+            <select
+              className="filter-select"
+              value={filters.type}
+              onChange={(e) => {
+                onFiltersChange({ ...filters, type: e.target.value })
+                onPaginationChange({ ...pagination, skip: 0 })
+              }}
+            >
+              {TYPE_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
@@ -463,18 +519,18 @@ function OrdersView({
 
               <div className="table-cell-actions">
                 {!order.operario_asignado && (
-                  <button className="action-button assign" onClick={() => onViewOrder(order.id)}>
+                  <button className="action-btn-icon assign" title="Asignar operario" onClick={() => onViewOrder(order.id)}>
                     <AssignIcon />
-                    <span>Asignar</span>
                   </button>
                 )}
-                <button className="action-button" style={{background: '#667EEA', color: '#FFF'}} onClick={() => onViewPacking(order.id)}>
+                <button className="action-btn-icon packing" title="Cajas" onClick={() => onViewPacking(order.id)}>
                   <BoxIcon />
-                  <span>Cajas</span>
                 </button>
-                <button className="action-button view" onClick={() => onViewOrder(order.id)}>
+                <button className="action-btn-icon view" title="Ver detalle" onClick={() => onViewOrder(order.id)}>
                   <EyeIcon />
-                  <span>Ver</span>
+                </button>
+                <button className="action-btn-icon history" title="Historia de orden" onClick={() => handleViewHistory(order.id, order.numero_orden)}>
+                  <ClockIcon />
                 </button>
               </div>
             </div>
@@ -508,6 +564,70 @@ function OrdersView({
           </div>
         )}
       </div>
+
+      {/* Modal de Historia de Orden */}
+      {showHistoryModal && (
+        <div className="order-history-overlay" onClick={() => setShowHistoryModal(false)}>
+          <div className="order-history-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="order-history-header">
+              <h2>Historia de Orden #{historyOrderId}</h2>
+              <button className="order-history-close" onClick={() => setShowHistoryModal(false)}>×</button>
+            </div>
+
+            <div className="order-history-body">
+              {historyLoading && (
+                <div className="order-history-loading">
+                  <div className="order-history-spinner"></div>
+                  <p>Cargando historial...</p>
+                </div>
+              )}
+
+              {historyError && (
+                <div className="order-history-error">
+                  <p>Error: {historyError}</p>
+                </div>
+              )}
+
+              {!historyLoading && !historyError && historyData.length === 0 && (
+                <div className="order-history-empty">
+                  <p>No hay eventos en el historial de esta orden</p>
+                </div>
+              )}
+
+              {!historyLoading && !historyError && historyData.length > 0 && (
+                <div className="order-history-timeline">
+                  {historyData.map((event, idx) => (
+                    <div key={event.id || idx} className="order-history-event">
+                      <div className="order-history-event-dot"></div>
+                      <div className="order-history-event-content">
+                        <div className="order-history-event-top">
+                          <span className="order-history-event-action">{event.accion || 'Evento'}</span>
+                          <span className="order-history-event-date">{formatHistoryDate(event.fecha || event.created_at)}</span>
+                        </div>
+                        {(event.status_anterior || event.status_nuevo) && (
+                          <div className="order-history-event-status">
+                            <span className="order-history-status-old">{event.status_anterior || '—'}</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span className="order-history-status-new">{event.status_nuevo || '—'}</span>
+                          </div>
+                        )}
+                        {event.notas && (
+                          <div className="order-history-event-notes">{event.notas}</div>
+                        )}
+                        {event.operator_id && (
+                          <div className="order-history-event-operator">Operador ID: {event.operator_id}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
