@@ -28,6 +28,10 @@ function Replenishment({ onBack }) {
   const [priorityFilter, setPriorityFilter] = useState('')
   const [almacenFilter, setAlmacenFilter] = useState('')
   const [productFilter, setProductFilter] = useState('')
+  const [ubicacionInput, setUbicacionInput] = useState('')
+  const [ubicacionFilter, setUbicacionFilter] = useState('')
+  const [skuInput, setSkuInput] = useState('')
+  const [skuFilter, setSkuFilter] = useState('')
   
   // Paginación
   const [pagination, setPagination] = useState({
@@ -59,6 +63,8 @@ function Replenishment({ onBack }) {
         priority: priorityFilter || undefined,
         almacen_id: almacenFilter || undefined,
         product_id: productFilter || undefined,
+        ubicacion: ubicacionFilter || undefined,
+        sku: skuFilter || undefined,
         page: pagination.page,
         perPage: pagination.perPage
       })
@@ -145,10 +151,28 @@ function Replenishment({ onBack }) {
     }
   }
 
+  // Debounce para ubicacion
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setUbicacionFilter(ubicacionInput)
+      setPagination(prev => ({ ...prev, page: 1 }))
+    }, 500)
+    return () => clearTimeout(timeout)
+  }, [ubicacionInput])
+
+  // Debounce para SKU
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setSkuFilter(skuInput)
+      setPagination(prev => ({ ...prev, page: 1 }))
+    }, 500)
+    return () => clearTimeout(timeout)
+  }, [skuInput])
+
   // Cargar al montar y cuando cambien filtros
   useEffect(() => {
     fetchRequests()
-  }, [statusFilter, priorityFilter, almacenFilter, productFilter, pagination.page])
+  }, [statusFilter, priorityFilter, almacenFilter, productFilter, ubicacionFilter, skuFilter, pagination.page])
 
   // Helpers
   const getPriorityIcon = (priority) => {
@@ -297,6 +321,22 @@ function Replenishment({ onBack }) {
           placeholder="ID Producto"
           value={productFilter}
           onChange={(e) => setProductFilter(e.target.value)}
+        />
+
+        <input
+          type="text"
+          className="filter-input"
+          placeholder="🔍 Buscar ubicación..."
+          value={ubicacionInput}
+          onChange={(e) => setUbicacionInput(e.target.value)}
+        />
+
+        <input
+          type="text"
+          className="filter-input"
+          placeholder="🔍 Buscar SKU..."
+          value={skuInput}
+          onChange={(e) => setSkuInput(e.target.value)}
         />
 
         <button className="refresh-button" onClick={fetchRequests}>

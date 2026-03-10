@@ -13,6 +13,8 @@ export const replenishmentService = {
    * @param {string} options.priority - Filtro de prioridad: 'URGENT', 'HIGH', 'NORMAL'
    * @param {number} options.almacen_id - ID del almacén
    * @param {number} options.product_id - ID del producto
+   * @param {string} options.ubicacion - Búsqueda por código de ubicación (origen o destino)
+   * @param {string} options.sku - Búsqueda por SKU del producto
    * @param {number} options.page - Número de página (default: 1)
    * @param {number} options.perPage - Items por página (default: 20)
    * @returns {Promise<Object>} Lista paginada de solicitudes
@@ -24,6 +26,8 @@ export const replenishmentService = {
         priority,
         almacen_id,
         product_id,
+        ubicacion,
+        sku,
         page = 1,
         perPage = 20
       } = options;
@@ -39,6 +43,8 @@ export const replenishmentService = {
       if (priority) params.append('priority', priority);
       if (almacen_id) params.append('almacen_id', almacen_id.toString());
       if (product_id) params.append('product_id', product_id.toString());
+      if (ubicacion) params.append('ubicacion', ubicacion);
+      if (sku) params.append('sku', sku);
       
       const url = `${API_BASE_URL}/replenishment/requests?${params}`;
       

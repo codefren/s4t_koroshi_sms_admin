@@ -20,7 +20,7 @@ export const orderService = {
    * @returns {Promise<Array>} Lista de órdenes
    */
   async getAll(options = {}) {
-    const { skip = 0, limit = 100, prioridad, estado_codigo, almacen_id, fecha_desde, fecha_hasta, signal } = options
+    const { skip = 0, limit = 100, prioridad, estado_codigo, almacen_id, fecha_desde, fecha_hasta, type, signal } = options
     
     // Construir query params
     const params = new URLSearchParams()
@@ -31,6 +31,7 @@ export const orderService = {
     if (almacen_id) params.append('almacen_id', almacen_id.toString())
     if (fecha_desde) params.append('fecha_desde', fecha_desde)
     if (fecha_hasta) params.append('fecha_hasta', fecha_hasta)
+    if (type) params.append('type', type)
     
     const response = await fetch(`${API_BASE_URL}/orders/?${params.toString()}`, {
       method: 'GET',
@@ -86,12 +87,27 @@ export const orderService = {
   },
 
   /**
-   * PUT /orders/{id}/assign-operator/
-   * Asigna un operario a una orden
+   * GET /orders/{order_id}/history
+   * Obtiene el historial de eventos de una orden
    * @param {number} orderId - ID de la orden
-   * @param {number} operatorId - ID del operario
-   * @returns {Promise<Object>} Orden actualizada
+   * @returns {Promise<Array>} Lista de eventos del historial
    */
+  async getHistory(orderId) {
+    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/history`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('Orden no encontrada')
+      }
+      throw new Error(`Error al cargar historial: ${response.status} ${response.statusText}`)
+    }
+
+    return response.json()
+  },
+
   async assignOperator(orderId, operatorId) {
     const response = await fetch(`${API_BASE_URL}/orders/${orderId}/assign-operator/`, {
       method: 'PUT',
