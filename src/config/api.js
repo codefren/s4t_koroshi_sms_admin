@@ -2,15 +2,15 @@
  * Configuración centralizada de la API
  * Lee la URL base desde variables de entorno de Vite
  */
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9821/api/v1'
 
 /**
  * IDs de almacenes del sistema
  * Centralizado aquí para fácil mantenimiento
  */
 export const WAREHOUSE_IDS = {
-  PICKING: 2,           // Almacén de Picking
-  REPLENISHMENT: 1,     // Almacén de Reposición
+  PICKING: 3,           // Almacén de Picking
+  REPLENISHMENT: 4,     // Almacén de Reposición
 }
 
 /**
