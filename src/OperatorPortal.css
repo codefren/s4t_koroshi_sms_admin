@@ -1,0 +1,456 @@
+/* ═══════════════════════════════════════════
+   OPERATOR PORTAL — Login
+   ═══════════════════════════════════════════ */
+.op-login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  padding: 20px;
+}
+
+.op-login-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.op-login-icon {
+  margin-bottom: 20px;
+}
+
+.op-login-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1A1F36;
+  margin: 0 0 8px 0;
+}
+
+.op-login-subtitle {
+  font-size: 14px;
+  color: #64748B;
+  margin: 0 0 32px 0;
+}
+
+.op-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.op-login-input {
+  width: 100%;
+  padding: 16px 20px;
+  border: 2px solid #E2E8F0;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1A1F36;
+  text-align: center;
+  letter-spacing: 1px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.op-login-input::placeholder {
+  font-weight: 400;
+  letter-spacing: 0;
+  color: #94A3B8;
+}
+
+.op-login-input:focus {
+  border-color: #667EEA;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+}
+
+.op-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  color: #FFF;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.op-login-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.op-login-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.op-login-error {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 10px;
+  color: #DC2626;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════
+   OPERATOR PORTAL — Header (always visible)
+   ═══════════════════════════════════════════ */
+.op-portal-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #F5F7FA;
+}
+
+.op-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 32px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E5E7EB;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.op-header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.op-header-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1A1F36;
+  margin: 0;
+}
+
+.op-header-operator {
+  font-size: 14px;
+  color: #64748B;
+  padding: 6px 14px;
+  background: #F1F5F9;
+  border-radius: 8px;
+}
+
+.op-header-operator strong {
+  color: #1A1F36;
+}
+
+.op-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #F1F5F9;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.op-back-btn:hover {
+  background: #E2E8F0;
+}
+
+.op-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #DC2626;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.op-logout-btn:hover {
+  background: #FEE2E2;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+}
+
+/* ═══════════════════════════════════════════
+   OPERATOR PORTAL — Orders List
+   ═══════════════════════════════════════════ */
+.op-orders-content {
+  flex: 1;
+  padding: 24px 32px;
+}
+
+.op-orders-count {
+  font-size: 14px;
+  color: #64748B;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.op-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.op-order-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #FFFFFF;
+  border-radius: 14px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.op-order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  border-color: #667EEA;
+}
+
+.op-order-main {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+}
+
+.op-order-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.op-order-number {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1A1F36;
+}
+
+.op-order-client {
+  font-size: 14px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.op-order-date {
+  font-size: 12px;
+  color: #94A3B8;
+}
+
+.op-order-items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 16px;
+  background: #F1F5F9;
+  border-radius: 10px;
+}
+
+.op-order-items-count {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1A1F36;
+}
+
+.op-order-items-label {
+  font-size: 11px;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.op-order-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  color: #FFF;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-left: 16px;
+}
+
+/* ═══════════════════════════════════════════
+   OPERATOR PORTAL — Packing View extras
+   ═══════════════════════════════════════════ */
+.op-packing-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.op-confirm-section {
+  padding: 24px 40px 32px;
+  background: #FFFFFF;
+  border-top: 1px solid #E5E7EB;
+}
+
+.op-confirm-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.op-confirm-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(46, 204, 113, 0.35);
+}
+
+/* ═══════════════════════════════════════════
+   OPERATOR PORTAL — Loading / Error / Empty
+   ═══════════════════════════════════════════ */
+.op-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #64748B;
+  gap: 12px;
+}
+
+.op-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #E2E8F0;
+  border-top-color: #667EEA;
+  border-radius: 50%;
+  animation: op-spin 0.8s linear infinite;
+}
+
+.op-spinner-small {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #FFF;
+  border-radius: 50%;
+  animation: op-spin 0.8s linear infinite;
+}
+
+@keyframes op-spin {
+  to { transform: rotate(360deg); }
+}
+
+.op-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 60px 20px;
+  text-align: center;
+  color: #DC2626;
+  font-size: 14px;
+}
+
+.op-retry-btn {
+  padding: 10px 24px;
+  background: #3B82F6;
+  color: #FFF;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.op-retry-btn:hover {
+  background: #2563EB;
+}
+
+.op-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 80px 20px;
+  text-align: center;
+  color: #94A3B8;
+  font-size: 15px;
+}
+
+/* ═══════════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .op-header {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .op-header-left {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .op-header-title {
+    font-size: 17px;
+  }
+
+  .op-orders-content {
+    padding: 16px;
+  }
+
+  .op-order-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .op-order-main {
+    justify-content: space-between;
+  }
+
+  .op-order-action {
+    margin-left: 0;
+    justify-content: center;
+  }
+
+  .op-confirm-section {
+    padding: 16px;
+  }
+
+  .op-login-card {
+    padding: 32px 24px;
+  }
+}

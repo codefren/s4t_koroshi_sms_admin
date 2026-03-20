@@ -20,7 +20,7 @@ export const orderService = {
    * @returns {Promise<Array>} Lista de órdenes
    */
   async getAll(options = {}) {
-    const { skip = 0, limit = 100, prioridad, estado_codigo, almacen_id, fecha_desde, fecha_hasta, type, signal } = options
+    const { skip = 0, limit = 100, prioridad, estado_codigo, almacen_id, fecha_desde, fecha_hasta, type, codigo_operario, signal } = options
     
     // Construir query params
     const params = new URLSearchParams()
@@ -32,6 +32,7 @@ export const orderService = {
     if (fecha_desde) params.append('fecha_desde', fecha_desde)
     if (fecha_hasta) params.append('fecha_hasta', fecha_hasta)
     if (type) params.append('type', type)
+    if (codigo_operario) params.append('codigo_operario', codigo_operario)
     
     const response = await fetch(`${API_BASE_URL}/orders/?${params.toString()}`, {
       method: 'GET',
