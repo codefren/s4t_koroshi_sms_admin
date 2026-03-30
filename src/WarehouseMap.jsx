@@ -1,230 +1,105 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import './WarehouseMap.css'
-import { warehouseService } from './services/warehouseService'
-import { WAREHOUSE_IDS } from './config/api'
-import WarehouseAisle from './components/WarehouseAisle'
-import WarehouseLocationModal from './components/WarehouseLocationModal'
+
+const PASILLOS = 11
+const UBICACIONES = 100
+const CELL_H = 14
 
 function WarehouseMap() {
-  const [locations, setLocations] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [activeFilter, setActiveFilter] = useState('all')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedLocation, setSelectedLocation] = useState(null)
-  const [showModal, setShowModal] = useState(false)
-  const [almacenId] = useState(WAREHOUSE_IDS.PICKING)
+  const [tooltip, setTooltip] = useState(null)
+  const rafRef = useRef(null)
 
-  useEffect(() => {
-    fetchLocations()
-  }, [almacenId])
+  const getCellFromMouse = useCallback((e, pasillo, lado) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const y = e.clientY - rect.top
+    const row = Math.min(UBICACIONES, Math.max(1, Math.floor(y / CELL_H) + 1))
+    const code = `P${pasillo}-${lado}-${String(row).padStart(3, '0')}`
+    return { row, code, x: e.clientX, y: e.clientY }
+  }, [])
 
-  const fetchLocations = async () => {
-    try {
-      console.log('🔍 Iniciando carga de ubicaciones...')
-      setLoading(true)
-      setError(null)
-      const data = await warehouseService.getAllLocations(almacenId, true)
-      console.log('✅ Datos recibidos:', data)
-      setLocations(data.locations || [])
-      console.log('✅ Locations actualizadas, total:', data.locations?.length)
-    } catch (err) {
-      console.error('❌ Error al cargar ubicaciones:', err)
-      setError(err.message || 'Error al cargar ubicaciones del almacén')
-    } finally {
-      console.log('✅ Finalizando carga (setLoading false)')
-      setLoading(false)
-    }
-  }
-
-  const stats = useMemo(() => {
-    return warehouseService.calculateStats(locations)
-  }, [locations])
-
-  const filteredLocations = useMemo(() => {
-    let filtered = [...locations]
-
-    if (activeFilter !== 'all') {
-      filtered = filtered.filter(loc => {
-        const status = warehouseService.getStockStatus(loc)
-        if (activeFilter === 'optimal') return status === 'optimal'
-        if (activeFilter === 'low') return status === 'low'
-        if (activeFilter === 'empty') return status === 'empty'
-        if (activeFilter === 'inactive') return status === 'inactive'
-        return true
+  const handleRackMove = useCallback((e, pasillo, lado) => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    rafRef.current = requestAnimationFrame(() => {
+      const { row, code, x, y } = getCellFromMouse(e, pasillo, lado)
+      setTooltip({
+        x, y: y - 10,
+        text: code,
+        detail: `Pasillo ${pasillo} · ${lado === 'I' ? 'Izquierda' : 'Derecha'} · Ubicación ${row}`
       })
-    }
+    })
+  }, [getCellFromMouse])
 
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase()
-      filtered = filtered.filter(loc => 
-        loc.code?.toLowerCase().includes(term) ||
-        loc.product_name?.toLowerCase().includes(term) ||
-        loc.product_sku?.toLowerCase().includes(term) ||
-        loc.pasillo?.toLowerCase().includes(term)
-      )
-    }
-
-    return filtered
-  }, [locations, activeFilter, searchTerm])
-
-  const groupedLocations = useMemo(() => {
-    return warehouseService.groupLocationsByStructure(filteredLocations)
-  }, [filteredLocations])
-
-  const pasillos = useMemo(() => {
-    return Object.keys(groupedLocations).sort()
-  }, [groupedLocations])
-
-  const handleLocationClick = (location) => {
-    setSelectedLocation(location)
-    setShowModal(true)
-  }
-
-  const handleCloseModal = () => {
-    setShowModal(false)
-    setSelectedLocation(null)
-  }
-
-  if (loading) {
-    return (
-      <div className="warehouse-map-container">
-        <div className="loading-state">
-          <div className="spinner"></div>
-          <p>Cargando mapa del almacén...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="warehouse-map-container">
-        <div className="error-state">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 8V12M12 16H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <p>{error}</p>
-          <button className="btn-primary" onClick={fetchLocations}>
-            Reintentar
-          </button>
-        </div>
-      </div>
-    )
-  }
+  const handleRackLeave = useCallback(() => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    setTooltip(null)
+  }, [])
 
   return (
-    <div className="warehouse-map-container">
-      <div className="warehouse-header">
-        <div className="warehouse-title-section">
-          <h1 className="warehouse-title">Mapa del Almacén</h1>
-          <p className="warehouse-subtitle">Visualización de todas las ubicaciones</p>
+    <div className="wm-container">
+      <div className="wm-topbar">
+        <div>
+          <h1 className="wm-title">Mapa del Almacén</h1>
+          <p className="wm-subtitle">{PASILLOS} pasillos · {UBICACIONES} ubicaciones/lado · {PASILLOS * UBICACIONES * 2} total</p>
         </div>
+        <div className="wm-legend">
+          <div className="wm-legend-item"><div className="wm-lg-rack wm-lg-left"></div><span>Rack Izq (I)</span></div>
+          <div className="wm-legend-item"><div className="wm-lg-rack wm-lg-right"></div><span>Rack Der (D)</span></div>
+          <div className="wm-legend-item"><div className="wm-lg-aisle"></div><span>Pasillo</span></div>
+        </div>
+      </div>
 
-        <div className="warehouse-stats">
-          <div className="stat-card">
-            <span className="stat-value">{stats.total}</span>
-            <span className="stat-label">Total</span>
+      <div className="wm-floor">
+        <div className="wm-walls">
+          <div className="wm-zone">
+            <div className="wm-zone-gate">ENTRADA</div>
           </div>
-          <div className="stat-card stat-optimal">
-            <span className="stat-value">{stats.stockOptimo}</span>
-            <span className="stat-label">Stock OK</span>
+
+          <div className="wm-scroll-area">
+            {/* Row ruler left */}
+            <div className="wm-ruler-v">
+              {[1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(n => (
+                <div key={n} className="wm-ruler-mark" style={{ top: (n - 1) * CELL_H }}>{n}</div>
+              ))}
+            </div>
+
+            {/* All aisles */}
+            <div className="wm-aisles">
+              {Array.from({ length: PASILLOS }, (_, i) => i + 1).map(p => (
+                <div key={p} className="wm-aisle-unit">
+                  <div className="wm-pasillo-tag">P{p}</div>
+                  <div className="wm-rack-row">
+                    <div
+                      className="wm-rack wm-rack-l"
+                      style={{ height: UBICACIONES * CELL_H }}
+                      onMouseMove={(e) => handleRackMove(e, p, 'I')}
+                      onMouseLeave={handleRackLeave}
+                    />
+                    <div className="wm-walkway" style={{ height: UBICACIONES * CELL_H }}>
+                      <span className="wm-walkway-num">{p}</span>
+                    </div>
+                    <div
+                      className="wm-rack wm-rack-r"
+                      style={{ height: UBICACIONES * CELL_H }}
+                      onMouseMove={(e) => handleRackMove(e, p, 'D')}
+                      onMouseLeave={handleRackLeave}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="stat-card stat-low">
-            <span className="stat-value">{stats.stockBajo}</span>
-            <span className="stat-label">Stock Bajo</span>
-          </div>
-          <div className="stat-card stat-empty">
-            <span className="stat-value">{stats.vacias}</span>
-            <span className="stat-label">Vacías</span>
-          </div>
-          <div className="stat-card stat-inactive">
-            <span className="stat-value">{stats.inactivas}</span>
-            <span className="stat-label">Inactivas</span>
+
+          <div className="wm-zone wm-zone-bottom">
+            <div className="wm-zone-gate">SALIDA / DESPACHO</div>
           </div>
         </div>
       </div>
 
-      <div className="warehouse-controls">
-        <div className="warehouse-filters">
-          <button 
-            className={`filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('all')}
-          >
-            Todos ({stats.total})
-          </button>
-          <button 
-            className={`filter-btn ${activeFilter === 'optimal' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('optimal')}
-          >
-            <span className="filter-dot optimal"></span>
-            Stock OK ({stats.stockOptimo})
-          </button>
-          <button 
-            className={`filter-btn ${activeFilter === 'low' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('low')}
-          >
-            <span className="filter-dot low"></span>
-            Stock Bajo ({stats.stockBajo})
-          </button>
-          <button 
-            className={`filter-btn ${activeFilter === 'empty' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('empty')}
-          >
-            <span className="filter-dot empty"></span>
-            Vacías ({stats.vacias})
-          </button>
-          <button 
-            className={`filter-btn ${activeFilter === 'inactive' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('inactive')}
-          >
-            <span className="filter-dot inactive"></span>
-            Inactivas ({stats.inactivas})
-          </button>
+      {tooltip && (
+        <div className="wm-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
+          <strong>{tooltip.text}</strong>
+          <span>{tooltip.detail}</span>
         </div>
-
-        <div className="warehouse-search">
-          <svg className="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17.5 17.5L13.875 13.875M15.8333 9.16667C15.8333 12.8486 12.8486 15.8333 9.16667 15.8333C5.48477 15.8333 2.5 12.8486 2.5 9.16667C2.5 5.48477 5.48477 2.5 9.16667 2.5C12.8486 2.5 15.8333 5.48477 15.8333 9.16667Z" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <input 
-            type="text"
-            className="search-input"
-            placeholder="Buscar por ubicación, producto o SKU..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="warehouse-content">
-        {pasillos.length === 0 ? (
-          <div className="empty-state">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 7L12 3L4 7M20 7L12 11M20 7V17L12 21M12 11L4 7M12 11V21M4 7V17L12 21" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <p>No se encontraron ubicaciones</p>
-            <span>Intenta ajustar los filtros de búsqueda</span>
-          </div>
-        ) : (
-          <div className="warehouse-aisles">
-            {pasillos.map(pasillo => (
-              <WarehouseAisle
-                key={pasillo}
-                pasillo={pasillo}
-                sideData={groupedLocations[pasillo]}
-                onLocationClick={handleLocationClick}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {showModal && selectedLocation && (
-        <WarehouseLocationModal
-          location={selectedLocation}
-          onClose={handleCloseModal}
-        />
       )}
     </div>
   )

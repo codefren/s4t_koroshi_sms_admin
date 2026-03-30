@@ -10,6 +10,8 @@ const Replenishment = lazy(() => import('./Replenishment'))
 const PackingDistribution = lazy(() => import('./PackingDistribution'))
 const WarehouseMap = lazy(() => import('./WarehouseMap'))
 const StockMovements = lazy(() => import('./StockMovements'))
+const Statistics = lazy(() => import('./Statistics'))
+const Settings = lazy(() => import('./Settings'))
 import { orderService } from './services/orderService'
 
 function App() {
@@ -166,6 +168,10 @@ function App() {
           <Replenishment onBack={() => setCurrentView('orders')} />
         ) : currentView === 'stock-movements' ? (
           <StockMovements />
+        ) : currentView === 'stats' ? (
+          <Statistics />
+        ) : currentView === 'settings' ? (
+          <Settings />
         ) : (
           <OrdersView
             orders={orders}
