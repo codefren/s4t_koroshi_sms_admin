@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import './Settings.css'
 import { almacenService } from './services/almacenService'
 
@@ -20,12 +20,24 @@ const TIPO_COLORS = {
   playa: { bg: '#D1FAE5', text: '#059669', border: '#A7F3D0' },
 }
 
-const EMPTY_FORM = {
-  descripcion: '',
-  tipo: 'picking',
-  pasillos: '',
+const LADOS_OPTIONS = [
+  { value: 'ambos', label: 'Ambos' },
+  { value: 'izquierda', label: 'Izquierda' },
+  { value: 'derecha', label: 'Derecha' },
+]
+
+const createPasillo = (numero) => ({
+  numero: String(numero),
+  lados: 'ambos',
   ubicaciones_largo: '',
   alturas: '',
+})
+
+const calcPasilloUbicaciones = (p) => {
+  const u = Number(p.ubicaciones_largo) || 0
+  const a = Number(p.alturas) || 0
+  const ladosMult = p.lados === 'ambos' ? 2 : 1
+  return u * a * ladosMult
 }
 
 function Settings() {
@@ -35,7 +47,9 @@ function Settings() {
 
   // Form state
   const [showForm, setShowForm] = useState(false)
-  const [formData, setFormData] = useState({ ...EMPTY_FORM })
+  const [descripcion, setDescripcion] = useState('')
+  const [tipo, setTipo] = useState('picking')
+  const [pasillos, setPasillos] = useState([createPasillo(1)])
   const [formErrors, setFormErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [editingId, setEditingId] = useState(null)
@@ -62,67 +76,66 @@ function Settings() {
     fetchAlmacenes()
   }, [])
 
-  const needsDimensions = (tipo) => tipo === 'picking' || tipo === 'reposicion'
+  const needsPasillos = (t) => t === 'picking' || t === 'reposicion'
 
-  const validate = () => {
-    const errors = {}
-    if (!formData.descripcion.trim()) {
-      errors.descripcion = 'La descripción es requerida'
-    }
-    if (!formData.tipo) {
-      errors.tipo = 'Seleccione un tipo de almacén'
-    }
-    if (needsDimensions(formData.tipo)) {
-      if (!formData.pasillos || Number(formData.pasillos) < 1) {
-        errors.pasillos = 'Debe tener al menos 1 pasillo'
-      }
-      if (!formData.ubicaciones_largo || Number(formData.ubicaciones_largo) < 1) {
-        errors.ubicaciones_largo = 'Debe tener al menos 1 ubicación'
-      }
-      if (!formData.alturas || Number(formData.alturas) < 1) {
-        errors.alturas = 'Debe tener al menos 1 nivel de altura'
-      }
-    }
-    return errors
+  const totalUbicaciones = useMemo(() => {
+    if (!needsPasillos(tipo)) return 1
+    return pasillos.reduce((sum, p) => sum + calcPasilloUbicaciones(p), 0)
+  }, [tipo, pasillos])
+
+  // --- Pasillo management ---
+  const addPasillo = () => {
+    const nextNum = pasillos.length > 0 ? Math.max(...pasillos.map(p => p.numero)) + 1 : 1
+    setPasillos(prev => [...prev, createPasillo(nextNum)])
   }
 
-  const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    if (formErrors[field]) {
-      setFormErrors(prev => {
-        const next = { ...prev }
-        delete next[field]
-        return next
-      })
+  const removePasillo = (index) => {
+    if (pasillos.length <= 1) return
+    setPasillos(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const updatePasillo = (index, field, value) => {
+    setPasillos(prev => prev.map((p, i) => i === index ? { ...p, [field]: value } : p))
+    if (formErrors.pasillos) {
+      setFormErrors(prev => { const n = { ...prev }; delete n.pasillos; return n })
     }
   }
 
-  const handleTipoChange = (tipo) => {
-    setFormData(prev => ({
-      ...prev,
-      tipo,
-      pasillos: tipo === 'playa' ? '' : prev.pasillos,
-      ubicaciones_largo: tipo === 'playa' ? '' : prev.ubicaciones_largo,
-      alturas: tipo === 'playa' ? '' : prev.alturas,
-    }))
+  // --- Form lifecycle ---
+  const handleTipoChange = (t) => {
+    setTipo(t)
+    if (t === 'playa') {
+      setPasillos([])
+    } else if (pasillos.length === 0) {
+      setPasillos([createPasillo(1)])
+    }
     setFormErrors({})
   }
 
   const openCreateForm = () => {
-    setFormData({ ...EMPTY_FORM })
+    setDescripcion('')
+    setTipo('picking')
+    setPasillos([createPasillo(1)])
     setFormErrors({})
     setEditingId(null)
     setShowForm(true)
   }
 
   const openEditForm = (almacen) => {
-    setFormData({
-      descripcion: almacen.descripciones || almacen.descripcion || '',
-      tipo: almacen.tipo || 'picking',
-      pasillos: almacen.pasillos || '',
-      ubicaciones_largo: almacen.ubicaciones_largo || '',
-      alturas: almacen.alturas || '',
-    })
+    setDescripcion(almacen.descripciones || almacen.descripcion || '')
+    setTipo(almacen.tipo || 'picking')
+    if (Array.isArray(almacen.pasillos_config) && almacen.pasillos_config.length > 0) {
+      setPasillos(almacen.pasillos_config.map(p => ({
+        numero: String(p.numero || 1),
+        lados: p.lados || 'ambos',
+        ubicaciones_largo: p.ubicaciones_largo || '',
+        alturas: p.alturas || '',
+      })))
+    } else if (almacen.tipo !== 'playa') {
+      setPasillos([createPasillo(1)])
+    } else {
+      setPasillos([])
+    }
     setFormErrors({})
     setEditingId(almacen.id)
     setShowForm(true)
@@ -130,9 +143,32 @@ function Settings() {
 
   const cancelForm = () => {
     setShowForm(false)
-    setFormData({ ...EMPTY_FORM })
+    setDescripcion('')
+    setTipo('picking')
+    setPasillos([createPasillo(1)])
     setFormErrors({})
     setEditingId(null)
+  }
+
+  const validate = () => {
+    const errors = {}
+    if (!descripcion.trim()) errors.descripcion = 'La descripción es requerida'
+    if (!tipo) errors.tipo = 'Seleccione un tipo de almacén'
+    if (needsPasillos(tipo)) {
+      if (pasillos.length === 0) {
+        errors.pasillos = 'Debe agregar al menos 1 pasillo'
+      } else {
+        const pErrors = []
+        pasillos.forEach((p, i) => {
+          const pe = {}
+          if (!p.ubicaciones_largo || Number(p.ubicaciones_largo) < 1) pe.ubicaciones_largo = true
+          if (!p.alturas || Number(p.alturas) < 1) pe.alturas = true
+          if (Object.keys(pe).length > 0) pErrors[i] = pe
+        })
+        if (pErrors.length > 0) errors.pasillos_rows = pErrors
+      }
+    }
+    return errors
   }
 
   const handleSubmit = async (e) => {
@@ -144,14 +180,17 @@ function Settings() {
     }
 
     const payload = {
-      descripcion: formData.descripcion.trim(),
-      tipo: formData.tipo,
+      descripcion: descripcion.trim(),
+      tipo,
     }
 
-    if (needsDimensions(formData.tipo)) {
-      payload.pasillos = Number(formData.pasillos)
-      payload.ubicaciones_largo = Number(formData.ubicaciones_largo)
-      payload.alturas = Number(formData.alturas)
+    if (needsPasillos(tipo)) {
+      payload.pasillos_config = pasillos.map(p => ({
+        numero: p.numero,
+        lados: p.lados,
+        ubicaciones_largo: Number(p.ubicaciones_largo),
+        alturas: Number(p.alturas),
+      }))
     }
 
     try {
@@ -183,12 +222,21 @@ function Settings() {
     }
   }
 
-  const getTotalUbicaciones = (almacen) => {
+  const getTotalFromAlmacen = (almacen) => {
     if (almacen.tipo === 'playa') return 1
+    if (Array.isArray(almacen.pasillos_config)) {
+      return almacen.pasillos_config.reduce((sum, p) => sum + calcPasilloUbicaciones(p), 0)
+    }
     const p = almacen.pasillos || 0
     const u = almacen.ubicaciones_largo || 0
     const a = almacen.alturas || 0
     return p * u * a * 2
+  }
+
+  const ladosLabel = (l) => {
+    if (l === 'ambos') return 'Izq + Der'
+    if (l === 'izquierda') return 'Izq'
+    return 'Der'
   }
 
   return (
@@ -202,7 +250,7 @@ function Settings() {
             <span className="settings-breadcrumb-active">Configuración</span>
           </div>
           <h1 className="settings-title">Gestión de Almacenes</h1>
-          <p className="settings-subtitle">Crea y administra los almacenes del sistema, define tipo y dimensiones.</p>
+          <p className="settings-subtitle">Crea y administra los almacenes del sistema, define tipo y dimensiones por pasillo.</p>
         </div>
         {!showForm && (
           <button className="settings-btn-primary" onClick={openCreateForm}>
@@ -235,7 +283,7 @@ function Settings() {
                 <div className="settings-tipo-grid">
                   {TIPO_OPTIONS.map(opt => {
                     const colors = TIPO_COLORS[opt.value]
-                    const isActive = formData.tipo === opt.value
+                    const isActive = tipo === opt.value
                     return (
                       <button
                         key={opt.value}
@@ -268,65 +316,112 @@ function Settings() {
                   type="text"
                   className={`settings-input ${formErrors.descripcion ? 'error' : ''}`}
                   placeholder="Ej: Almacén Principal Planta 1"
-                  value={formData.descripcion}
-                  onChange={(e) => handleChange('descripcion', e.target.value)}
+                  value={descripcion}
+                  onChange={(e) => { setDescripcion(e.target.value); if (formErrors.descripcion) setFormErrors(p => { const n = {...p}; delete n.descripcion; return n }) }}
                 />
                 {formErrors.descripcion && <span className="settings-field-error">{formErrors.descripcion}</span>}
               </div>
 
-              {/* Dimensiones (solo picking/reposicion) */}
-              {needsDimensions(formData.tipo) && (
-                <div className="settings-dimensions">
-                  <div className="settings-dimensions-title">Dimensiones del Almacén</div>
-                  <div className="settings-dim-grid">
-                    <div className="settings-field">
-                      <label className="settings-label">Pasillos</label>
-                      <input
-                        type="number"
-                        min="1"
-                        className={`settings-input ${formErrors.pasillos ? 'error' : ''}`}
-                        placeholder="Ej: 11"
-                        value={formData.pasillos}
-                        onChange={(e) => handleChange('pasillos', e.target.value)}
-                      />
-                      {formErrors.pasillos && <span className="settings-field-error">{formErrors.pasillos}</span>}
+              {/* Aisle builder (picking/reposicion) */}
+              {needsPasillos(tipo) && (
+                <div className="settings-aisle-builder">
+                  <div className="settings-aisle-builder-head">
+                    <div className="settings-aisle-builder-title">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 21L21 21M3 7V21M21 7V21M6 3H18C19.1046 3 20 3.89543 20 5V7H4V5C4 3.89543 4.89543 3 6 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                      <span>Configuración de Pasillos</span>
                     </div>
-                    <div className="settings-field">
-                      <label className="settings-label">Ubicaciones a lo largo</label>
-                      <input
-                        type="number"
-                        min="1"
-                        className={`settings-input ${formErrors.ubicaciones_largo ? 'error' : ''}`}
-                        placeholder="Ej: 100"
-                        value={formData.ubicaciones_largo}
-                        onChange={(e) => handleChange('ubicaciones_largo', e.target.value)}
-                      />
-                      {formErrors.ubicaciones_largo && <span className="settings-field-error">{formErrors.ubicaciones_largo}</span>}
-                    </div>
-                    <div className="settings-field">
-                      <label className="settings-label">Alturas (niveles)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        className={`settings-input ${formErrors.alturas ? 'error' : ''}`}
-                        placeholder="Ej: 5"
-                        value={formData.alturas}
-                        onChange={(e) => handleChange('alturas', e.target.value)}
-                      />
-                      {formErrors.alturas && <span className="settings-field-error">{formErrors.alturas}</span>}
-                    </div>
+                    <button type="button" className="settings-btn-add-aisle" onClick={addPasillo}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                      Agregar Pasillo
+                    </button>
                   </div>
-                  {needsDimensions(formData.tipo) && formData.pasillos && formData.ubicaciones_largo && formData.alturas && (
-                    <div className="settings-dim-summary">
-                      Total estimado: <strong>{Number(formData.pasillos) * Number(formData.ubicaciones_largo) * Number(formData.alturas) * 2}</strong> ubicaciones
-                      ({formData.pasillos} pasillos × {formData.ubicaciones_largo} largo × {formData.alturas} alturas × 2 lados)
+
+                  {formErrors.pasillos && <div className="settings-field-error" style={{ marginBottom: 8 }}>{formErrors.pasillos}</div>}
+
+                  {pasillos.length > 0 && (
+                    <div className="settings-aisle-table">
+                      <div className="settings-aisle-row settings-aisle-row-header">
+                        <div className="settings-aisle-col-num">#</div>
+                        <div className="settings-aisle-col-lados">Lados</div>
+                        <div className="settings-aisle-col-ubic">Ubicaciones largo</div>
+                        <div className="settings-aisle-col-alt">Alturas</div>
+                        <div className="settings-aisle-col-total">Ubicaciones</div>
+                        <div className="settings-aisle-col-action"></div>
+                      </div>
+                      {pasillos.map((p, i) => {
+                        const rowErrors = formErrors.pasillos_rows?.[i] || {}
+                        return (
+                          <div key={i} className="settings-aisle-row">
+                            <div className="settings-aisle-col-num">
+                              <input
+                                type="text"
+                                className="settings-aisle-input settings-aisle-input-num"
+                                value={p.numero}
+                                onChange={(e) => updatePasillo(i, 'numero', e.target.value)}
+                                placeholder="1A"
+                              />
+                            </div>
+                            <div className="settings-aisle-col-lados">
+                              <select
+                                className="settings-aisle-select"
+                                value={p.lados}
+                                onChange={(e) => updatePasillo(i, 'lados', e.target.value)}
+                              >
+                                {LADOS_OPTIONS.map(o => (
+                                  <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="settings-aisle-col-ubic">
+                              <input
+                                type="number"
+                                min="1"
+                                className={`settings-aisle-input ${rowErrors.ubicaciones_largo ? 'error' : ''}`}
+                                placeholder="100"
+                                value={p.ubicaciones_largo}
+                                onChange={(e) => updatePasillo(i, 'ubicaciones_largo', e.target.value)}
+                              />
+                            </div>
+                            <div className="settings-aisle-col-alt">
+                              <input
+                                type="number"
+                                min="1"
+                                className={`settings-aisle-input ${rowErrors.alturas ? 'error' : ''}`}
+                                placeholder="5"
+                                value={p.alturas}
+                                onChange={(e) => updatePasillo(i, 'alturas', e.target.value)}
+                              />
+                            </div>
+                            <div className="settings-aisle-col-total">
+                              <span className="settings-aisle-total-val">{calcPasilloUbicaciones(p).toLocaleString()}</span>
+                            </div>
+                            <div className="settings-aisle-col-action">
+                              <button
+                                type="button"
+                                className="settings-aisle-remove"
+                                onClick={() => removePasillo(i)}
+                                disabled={pasillos.length <= 1}
+                                title="Eliminar pasillo"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
+
+                  <div className="settings-aisle-summary">
+                    <span>{pasillos.length} pasillo{pasillos.length !== 1 ? 's' : ''}</span>
+                    <span className="settings-aisle-summary-sep">·</span>
+                    <span>Total: <strong>{totalUbicaciones.toLocaleString()}</strong> ubicaciones</span>
+                  </div>
                 </div>
               )}
 
               {/* Playa info */}
-              {formData.tipo === 'playa' && (
+              {tipo === 'playa' && (
                 <div className="settings-playa-info">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 16V12M12 8H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                   <span>La Zona de Playa es un área de carga/descarga sin espacios específicos. Se registra como una ubicación única.</span>
@@ -375,9 +470,10 @@ function Settings() {
           /* Almacenes list */
           <div className="settings-grid">
             {almacenes.map(almacen => {
-              const tipo = almacen.tipo || 'picking'
-              const colors = TIPO_COLORS[tipo] || TIPO_COLORS.picking
+              const t = almacen.tipo || 'picking'
+              const colors = TIPO_COLORS[t] || TIPO_COLORS.picking
               const isDeleting = deletingId === almacen.id
+              const hasAisleConfig = Array.isArray(almacen.pasillos_config) && almacen.pasillos_config.length > 0
 
               return (
                 <div key={almacen.id} className="settings-card">
@@ -386,7 +482,7 @@ function Settings() {
                       className="settings-card-badge"
                       style={{ background: colors.bg, color: colors.text, borderColor: colors.border }}
                     >
-                      {TIPO_LABELS[tipo] || tipo}
+                      {TIPO_LABELS[t] || t}
                     </span>
                     <div className="settings-card-actions">
                       <button className="settings-card-btn" title="Editar" onClick={() => openEditForm(almacen)}>
@@ -408,25 +504,45 @@ function Settings() {
                     </div>
                   </div>
                   <h3 className="settings-card-name">{almacen.descripciones || almacen.descripcion || almacen.codigo || `Almacén #${almacen.id}`}</h3>
-                  {tipo !== 'playa' ? (
-                    <div className="settings-card-dims">
-                      <div className="settings-card-dim">
-                        <span className="settings-card-dim-value">{almacen.pasillos || '—'}</span>
-                        <span className="settings-card-dim-label">Pasillos</span>
+
+                  {t !== 'playa' ? (
+                    <>
+                      {hasAisleConfig ? (
+                        <div className="settings-card-aisles">
+                          <div className="settings-card-aisles-header">
+                            <span>Pasillo</span><span>Lados</span><span>Largo</span><span>Alturas</span><span>Ubic.</span>
+                          </div>
+                          {almacen.pasillos_config.map((pc, idx) => (
+                            <div key={idx} className="settings-card-aisles-row">
+                              <span>P{pc.numero}</span>
+                              <span>{ladosLabel(pc.lados)}</span>
+                              <span>{pc.ubicaciones_largo}</span>
+                              <span>{pc.alturas}</span>
+                              <span>{calcPasilloUbicaciones(pc).toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="settings-card-dims">
+                          <div className="settings-card-dim">
+                            <span className="settings-card-dim-value">{almacen.pasillos || '—'}</span>
+                            <span className="settings-card-dim-label">Pasillos</span>
+                          </div>
+                          <div className="settings-card-dim">
+                            <span className="settings-card-dim-value">{almacen.ubicaciones_largo || '—'}</span>
+                            <span className="settings-card-dim-label">Largo</span>
+                          </div>
+                          <div className="settings-card-dim">
+                            <span className="settings-card-dim-value">{almacen.alturas || '—'}</span>
+                            <span className="settings-card-dim-label">Alturas</span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="settings-card-total-row">
+                        <span>{hasAisleConfig ? almacen.pasillos_config.length : (almacen.pasillos || 0)} pasillos</span>
+                        <span><strong>{getTotalFromAlmacen(almacen).toLocaleString()}</strong> ubicaciones totales</span>
                       </div>
-                      <div className="settings-card-dim">
-                        <span className="settings-card-dim-value">{almacen.ubicaciones_largo || '—'}</span>
-                        <span className="settings-card-dim-label">Largo</span>
-                      </div>
-                      <div className="settings-card-dim">
-                        <span className="settings-card-dim-value">{almacen.alturas || '—'}</span>
-                        <span className="settings-card-dim-label">Alturas</span>
-                      </div>
-                      <div className="settings-card-dim">
-                        <span className="settings-card-dim-value">{getTotalUbicaciones(almacen).toLocaleString()}</span>
-                        <span className="settings-card-dim-label">Total Ubic.</span>
-                      </div>
-                    </div>
+                    </>
                   ) : (
                     <div className="settings-card-playa">
                       <span>Ubicación única · Zona de carga/descarga</span>
