@@ -52,6 +52,7 @@ function OrdersView({
   const [operatorFilter, setOperatorFilter] = useState('')
   const [almacenes, setAlmacenes] = useState([])
   const [loadingAlmacenes, setLoadingAlmacenes] = useState(false)
+  const [draftFilters, setDraftFilters] = useState(filters)
 
   // Historia de orden
   const [showHistoryModal, setShowHistoryModal] = useState(false)
@@ -273,11 +274,8 @@ function OrdersView({
             <label className="filter-label">Estado:</label>
             <select
               className="filter-select"
-              value={filters.estado_codigo}
-              onChange={(e) => {
-                onFiltersChange({ ...filters, estado_codigo: e.target.value })
-                onPaginationChange({ ...pagination, skip: 0 }) // Reset to first page
-              }}
+              value={draftFilters.estado_codigo}
+              onChange={(e) => setDraftFilters(prev => ({ ...prev, estado_codigo: e.target.value }))}
             >
               {STATUS_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -289,11 +287,8 @@ function OrdersView({
             <label className="filter-label">Prioridad:</label>
             <select
               className="filter-select"
-              value={filters.prioridad}
-              onChange={(e) => {
-                onFiltersChange({ ...filters, prioridad: e.target.value })
-                onPaginationChange({ ...pagination, skip: 0 }) // Reset to first page
-              }}
+              value={draftFilters.prioridad}
+              onChange={(e) => setDraftFilters(prev => ({ ...prev, prioridad: e.target.value }))}
             >
               {PRIORITY_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -305,11 +300,8 @@ function OrdersView({
             <label className="filter-label">Tipo:</label>
             <select
               className="filter-select"
-              value={filters.type}
-              onChange={(e) => {
-                onFiltersChange({ ...filters, type: e.target.value })
-                onPaginationChange({ ...pagination, skip: 0 })
-              }}
+              value={draftFilters.type}
+              onChange={(e) => setDraftFilters(prev => ({ ...prev, type: e.target.value }))}
             >
               {TYPE_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -321,11 +313,8 @@ function OrdersView({
             <label className="filter-label">Almacén:</label>
             <select
               className="filter-select"
-              value={filters.almacen_id}
-              onChange={(e) => {
-                onFiltersChange({ ...filters, almacen_id: e.target.value })
-                onPaginationChange({ ...pagination, skip: 0 }) // Reset to first page
-              }}
+              value={draftFilters.almacen_id}
+              onChange={(e) => setDraftFilters(prev => ({ ...prev, almacen_id: e.target.value }))}
               disabled={loadingAlmacenes}
             >
               <option value="">Todos</option>
@@ -357,11 +346,8 @@ function OrdersView({
             <input
               type="date"
               className="filter-select"
-              value={filters.fecha_desde}
-              onChange={(e) => {
-                onFiltersChange({ ...filters, fecha_desde: e.target.value })
-                onPaginationChange({ ...pagination, skip: 0 })
-              }}
+              value={draftFilters.fecha_desde}
+              onChange={(e) => setDraftFilters(prev => ({ ...prev, fecha_desde: e.target.value }))}
             />
           </div>
 
@@ -370,11 +356,8 @@ function OrdersView({
             <input
               type="date"
               className="filter-select"
-              value={filters.fecha_hasta}
-              onChange={(e) => {
-                onFiltersChange({ ...filters, fecha_hasta: e.target.value })
-                onPaginationChange({ ...pagination, skip: 0 })
-              }}
+              value={draftFilters.fecha_hasta}
+              onChange={(e) => setDraftFilters(prev => ({ ...prev, fecha_hasta: e.target.value }))}
             />
           </div>
 
@@ -391,6 +374,22 @@ function OrdersView({
               <option value="100">100</option>
               <option value="200">200</option>
             </select>
+          </div>
+
+          <div className="filter-group" style={{ alignSelf: 'flex-end' }}>
+            <button
+              className="btn-actualizar-filtros"
+              onClick={() => {
+                onFiltersChange(draftFilters)
+                onPaginationChange({ ...pagination, skip: 0 })
+              }}
+              disabled={loading}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M21 12C21 16.9706 16.9706 21 12 21C9.69494 21 7.59227 20.1334 6 18.7083L3 16M3 12C3 7.02944 7.02944 3 12 3C14.3051 3 16.4077 3.86656 18 5.29168L21 8M3 16V22M3 16H9M21 2V8M21 8H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Actualizar
+            </button>
           </div>
         </div>
 
