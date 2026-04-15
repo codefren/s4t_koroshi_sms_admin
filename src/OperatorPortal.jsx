@@ -166,7 +166,7 @@ function OperatorPortal() {
 
         <div className="op-packing-content">
           <Suspense fallback={<div className="op-loading"><div className="op-spinner"></div><p>Cargando...</p></div>}>
-            <PackingDistribution orderId={selectedOrderId} onBack={handleBackToOrders} showConfirmButton={true} />
+            <PackingDistribution orderId={selectedOrderId} onBack={handleBackToOrders} showConfirmButton={true} onConfirmBoxes={handleBackToOrders} />
           </Suspense>
         </div>
       </div>

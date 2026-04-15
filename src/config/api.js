@@ -4,6 +4,9 @@
  */
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
 
+export const SERVICE_API_BASE_URL = import.meta.env.VITE_SERVICE_API_BASE_URL || API_BASE_URL.replace('/api/v1', '/api/service')
+export const SERVICE_API_KEY = import.meta.env.VITE_SERVICE_API_KEY || ''
+
 /**
  * IDs de almacenes del sistema
  * Centralizado aquí para fácil mantenimiento

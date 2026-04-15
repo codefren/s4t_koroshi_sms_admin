@@ -2,7 +2,7 @@
  * Servicio para interactuar con la API de Órdenes
  */
 
-import { API_BASE_URL } from '../config/api'
+import { API_BASE_URL, SERVICE_API_BASE_URL, SERVICE_API_KEY } from '../config/api'
 
 export const orderService = {
   /**
@@ -107,6 +107,32 @@ export const orderService = {
     }
 
     return response.json()
+  },
+
+  /**
+   * PUT /api/service/orders/{order_number}/batch-update
+   * Registra las cantidades servidas por línea y marca la orden como READY
+   * @param {string} orderNumber - Número de orden (ej: ORD-12345)
+   * @param {Array} lines - Lista de líneas: [{ sku, quantity_served, box_code? }]
+   * @returns {Promise<Object>} Resultado del batch-update
+   */
+  async batchUpdate(orderNumber, lines) {
+    const response = await fetch(`${SERVICE_API_BASE_URL}/orders/${orderNumber}/batch-update`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': SERVICE_API_KEY,
+      },
+      body: JSON.stringify({ lines }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.detail || `Error ${response.status}: ${response.statusText}`)
+    }
+
+    return data
   },
 
   async assignOperator(orderId, operatorId) {
