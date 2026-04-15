@@ -100,7 +100,7 @@ function App() {
   // Cargar órdenes al montar el componente y cuando cambien filtros/paginación
   useEffect(() => {
     fetchOrders()
-  }, [pagination.skip, pagination.limit, filters.prioridad, filters.estado_codigo, filters.type])
+  }, [pagination.skip, pagination.limit, filters.prioridad, filters.estado_codigo, filters.type, filters.almacen_id, filters.fecha_desde, filters.fecha_hasta])
 
 const handleViewOrder = (orderId) => {
     setSelectedOrderId(orderId)
