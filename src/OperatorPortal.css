@@ -408,6 +408,136 @@
 }
 
 /* ═══════════════════════════════════════════
+   OPERATOR PORTAL — XPO Success Modal
+   ═══════════════════════════════════════════ */
+.op-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  padding: 20px;
+}
+
+.op-modal {
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  animation: op-modal-in 0.25s ease;
+}
+
+@keyframes op-modal-in {
+  from { opacity: 0; transform: scale(0.93) translateY(8px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+
+.op-modal-icon {
+  margin-bottom: 16px;
+}
+
+.op-modal-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1A1F36;
+  margin: 0 0 8px 0;
+}
+
+.op-modal-message {
+  font-size: 14px;
+  color: #64748B;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+.op-modal-details {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 28px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.op-modal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.op-modal-label {
+  color: #64748B;
+  font-weight: 500;
+}
+
+.op-modal-value {
+  color: #1A1F36;
+  font-weight: 600;
+}
+
+.op-modal-badge {
+  background: #D1FAE5;
+  color: #065F46;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+.op-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.op-modal-print-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  color: #FFFFFF;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.op-modal-print-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.op-modal-close-btn {
+  padding: 12px 24px;
+  background: #F1F5F9;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.op-modal-close-btn:hover {
+  background: #E2E8F0;
+}
+
+/* ═══════════════════════════════════════════
    Responsive
    ═══════════════════════════════════════════ */
 @media (max-width: 640px) {

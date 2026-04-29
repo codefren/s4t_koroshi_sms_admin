@@ -13,6 +13,7 @@ function OperatorPortal() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [selectedOrderId, setSelectedOrderId] = useState(null)
+  const [xpoResult, setXpoResult] = useState(null)
   const inputRef = useRef(null)
 
   // Focus en el input al montar login
@@ -62,12 +63,24 @@ function OperatorPortal() {
     setView('orders')
   }
 
+  const handlePickingComplete = (result) => {
+    setXpoResult(result)
+  }
+
+  const handleCloseModal = () => {
+    setXpoResult(null)
+    setSelectedOrderId(null)
+    setView('orders')
+    fetchOrders(loggedOperator)
+  }
+
   const handleLogout = () => {
     setView('login')
     setLoggedOperator('')
     setOperatorCode('')
     setOrders([])
     setSelectedOrderId(null)
+    setXpoResult(null)
     setError(null)
   }
 
@@ -166,9 +179,70 @@ function OperatorPortal() {
 
         <div className="op-packing-content">
           <Suspense fallback={<div className="op-loading"><div className="op-spinner"></div><p>Cargando...</p></div>}>
-            <PackingDistribution orderId={selectedOrderId} onBack={handleBackToOrders} showConfirmButton={true} onConfirmBoxes={handleBackToOrders} />
+            <PackingDistribution orderId={selectedOrderId} onBack={handleBackToOrders} showConfirmButton={true} onConfirmBoxes={handlePickingComplete} />
           </Suspense>
         </div>
+
+        {xpoResult && (
+          <div className="op-modal-overlay">
+            <div className="op-modal">
+              <div className="op-modal-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" fill="#D1FAE5"/>
+                  <path d="M8 12L11 15L16 9" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <h2 className="op-modal-title">¡Picking Completado!</h2>
+              <p className="op-modal-message">{xpoResult.message}</p>
+
+              <div className="op-modal-details">
+                <div className="op-modal-row">
+                  <span className="op-modal-label">Orden</span>
+                  <span className="op-modal-value">#{xpoResult.order_number}</span>
+                </div>
+                <div className="op-modal-row">
+                  <span className="op-modal-label">Estado</span>
+                  <span className="op-modal-badge">{xpoResult.order_status}</span>
+                </div>
+                {xpoResult.external_api_data?.consignment_id && (
+                  <div className="op-modal-row">
+                    <span className="op-modal-label">Consignment ID</span>
+                    <span className="op-modal-value">{xpoResult.external_api_data.consignment_id}</span>
+                  </div>
+                )}
+                <div className="op-modal-row">
+                  <span className="op-modal-label">Líneas completadas</span>
+                  <span className="op-modal-value">{xpoResult.lines_completed}</span>
+                </div>
+                <div className="op-modal-row">
+                  <span className="op-modal-label">Líneas pendientes</span>
+                  <span className="op-modal-value">{xpoResult.lines_pending}</span>
+                </div>
+              </div>
+
+              <div className="op-modal-actions">
+                {xpoResult.external_api_data?.pdf_path && (
+                  <a
+                    href={`http://82.223.131.45:9843/media/${xpoResult.external_api_data.pdf_path}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="op-modal-print-btn"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M6 9V2H18V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M6 18H4C3.46957 18 2.96086 17.7893 2.58579 17.4142C2.21071 17.0391 2 16.5304 2 16V11C2 10.4696 2.21071 9.96086 2.58579 9.58579C2.96086 9.21071 3.46957 9 4 9H20C20.5304 9 21.0391 9.21071 21.4142 9.58579C21.7893 9.96086 22 10.4696 22 11V16C22 16.5304 21.7893 17.0391 21.4142 17.4142C21.0391 17.7893 20.5304 18 20 18H18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M18 14H6V22H18V14Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Imprimir PDF
+                  </a>
+                )}
+                <button className="op-modal-close-btn" onClick={handleCloseModal}>
+                  Volver a órdenes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
